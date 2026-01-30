@@ -715,6 +715,7 @@ export default function TransactionsPage() {
               </option>
               <option value="loan_repayment">Loan Repayment</option>
               <option value="fine">Fine</option>
+              <option value="welfare_usage">Welfare Usage</option>
             </select>
           </div>
 

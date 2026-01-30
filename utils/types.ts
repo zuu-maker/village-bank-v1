@@ -26,7 +26,10 @@ export interface Transaction {
     | "loan_repayment"
     | "fine"
     | "dividend"
-    | "withdrawal";
+    | "withdrawal"
+    | "welfare_usage" // Money taken from social pot for emergencies
+    | "social_loan_disbursement" // Social loan given to member
+    | "social_loan_repayment"; // Social loan repaid by member
   amount: number;
   date: string;
   description: string;
@@ -120,4 +123,31 @@ export interface PotSummary {
   birthdayPot: number;
   loansPot: number;
   totalFunds: number;
+}
+
+export interface SocialLoan {
+  id: string;
+  memberId: string;
+  memberName: string;
+  principalAmount: number;
+  interestRate: number;
+  interestType: "simple" | "compound";
+  interestAmount: number;
+  totalRepayment: number;
+  amountPaid: number;
+  status: "pending" | "approved" | "active" | "paid" | "defaulted";
+  requestDate: string;
+  approvalDate?: string;
+  dueDate: string;
+  lastPaymentDate?: string;
+  rolloverCount: number;
+}
+
+export interface SocialPotSummary {
+  totalContributions: number; // Total contributed by all members
+  totalUsedForWelfare: number; // Used for emergencies
+  totalLoanedOut: number; // Currently loaned out
+  totalInterestEarned: number; // Interest from social loans
+  availableForLoans: number; // Can still be loaned
+  availableForDistribution: number; // At cycle end
 }

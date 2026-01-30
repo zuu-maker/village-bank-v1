@@ -9,8 +9,60 @@ import {
   Settings,
   DashboardStats,
   PotSummary,
+  SocialLoan,
 } from "../utils/types";
 import * as db from "../utils/database";
+
+// hook for social Loans
+
+export const useSocialLoans = (memberId?: string) => {
+  const [loans, setLoans] = useState<SocialLoan[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(() => {
+    setLoading(true);
+    const data = memberId
+      ? db.getSocialLoansByMember(memberId)
+      : db.getSocialLoans();
+    setLoans(data);
+    setLoading(false);
+  }, [memberId]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  return {
+    loans,
+    loading,
+    refresh,
+    createLoan: (
+      memberId: string,
+      amount: number,
+      period: number,
+      rate: number,
+      type: "simple" | "compound",
+    ) => {
+      const result = db.createSocialLoan(memberId, amount, period, rate, type);
+      refresh();
+      return result;
+    },
+    approveLoan: (loanId: string) => {
+      const result = db.approveSocialLoan(loanId);
+      refresh();
+      return result;
+    },
+    makePayment: (loanId: string, amount: number) => {
+      const result = db.makeSocialLoanPayment(loanId, amount);
+      refresh();
+      return result;
+    },
+    // double check these at the bottom but i believe we are just passing the functions to be used later you feel me?
+    checkEligibility: db.checkSocialLoanEligibility,
+    getActiveSocialLoans: db.getActiveSocialLoans,
+    getSocialPotSummary: db.getSocialPotSummary,
+  };
+};
 
 // Hook for managing members
 export const useMembers = () => {

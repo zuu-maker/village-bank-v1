@@ -14,6 +14,7 @@ import {
   PiggyBank,
   Download,
   X,
+  Heart,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -26,6 +27,12 @@ const menuItems = [
   { href: "/members", label: "Members", icon: Users },
   { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
   { href: "/loans", label: "Loans", icon: HandCoins },
+  {
+    label: "Social Loans",
+    href: "/social-loans",
+    icon: Heart, // import { Heart } from 'lucide-react'
+  },
+
   { href: "/calculator", label: "Interest Calculator", icon: Calculator },
   { href: "/pots", label: "The Three Pots", icon: PiggyBank },
   { href: "/cycles", label: "Cycles", icon: CalendarDays },
@@ -96,7 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <p className="px-4 py-2 text-xs font-bold text-forest-500 uppercase tracking-wider">
               Main Menu
             </p>
-            {menuItems.slice(0, 4).map((item) => {
+            {menuItems.slice(0, 5).map((item) => {
               const isActive =
                 pathname.length > 1
                   ? pathname.slice(0, -1) === item.href
@@ -139,8 +146,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <p className="px-4 py-2 text-xs font-bold text-forest-500 uppercase tracking-wider">
               Tools
             </p>
-            {menuItems.slice(4, 7).map((item) => {
-              const isActive = pathname === item.href;
+            {menuItems.slice(5, 7).map((item) => {
+              const isActive = pathname.slice(0, -1) === item.href;
               return (
                 <Link
                   key={item.href}
@@ -178,7 +185,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               System
             </p>
             {menuItems.slice(7).map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = pathname.slice(0, -1) === item.href;
               return (
                 <Link
                   key={item.href}

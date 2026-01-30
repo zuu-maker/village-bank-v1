@@ -11,6 +11,8 @@ import {
   DashboardStats,
   PotSummary,
   InterestCalculation,
+  SocialLoan,
+  SocialPotSummary,
 } from "./types";
 
 const STORAGE_KEYS = {
@@ -20,6 +22,8 @@ const STORAGE_KEYS = {
   CYCLES: "vb_cycles",
   MEETINGS: "vb_meetings",
   SETTINGS: "vb_settings",
+  SOCIAL_LOANS: "vb_social_loans",
+  SOCIAL_WELFARE_USAGE: "vb_social_welfare",
 };
 
 // Helper function to generate unique IDs
@@ -46,6 +50,333 @@ const safeJsonStore = <T>(key: string, value: T): void => {
   } catch (error) {
     console.error("Error storing data:", error);
   }
+};
+
+// ============================================
+// Social Loans SETTINGS
+// ============================================
+
+export const getSocialLoans = (): SocialLoan[] => {
+  return safeJsonParse<SocialLoan[]>(STORAGE_KEYS.SOCIAL_LOANS, []);
+};
+
+export const getSocialLoansByMember = (memberId: string): SocialLoan[] => {
+  return getSocialLoans().filter((loan) => loan.memberId === memberId);
+};
+
+export const getActiveSocialLoans = (): SocialLoan[] => {
+  return getSocialLoans().filter((loan) => loan.status === "active");
+};
+
+// Check social loan eligibility - different rules from main loans!
+export const checkSocialLoanEligibility = (
+  memberId: string,
+  amount: number,
+): {
+  eligible: boolean;
+  maxAmount: number;
+  reason?: string;
+} => {
+  const member = getMemberById(memberId);
+  if (!member)
+    return { eligible: false, maxAmount: 0, reason: "Member not found" };
+  if (member.status !== "active")
+    return { eligible: false, maxAmount: 0, reason: "Member is not active" };
+
+  // Check if member already has active social loan
+  const activeSocialLoan = getSocialLoans().find(
+    (l) => l.memberId === memberId && l.status === "active",
+  );
+  if (activeSocialLoan) {
+    return {
+      eligible: false,
+      maxAmount: 0,
+      reason: "Member has existing active social loan",
+    };
+  }
+
+  // Calculate available social funds for lending
+  const socialSummary = getSocialPotSummary();
+  const maxAmount = socialSummary.availableForLoans;
+
+  if (amount > maxAmount) {
+    return {
+      eligible: false,
+      maxAmount,
+      reason: `Only ${maxAmount} available in social pot`,
+    };
+  }
+
+  return { eligible: true, maxAmount };
+};
+
+// Create a social loan
+export const createSocialLoan = (
+  memberId: string,
+  amount: number,
+  period: number,
+  interestRate: number,
+  interestType: "simple" | "compound",
+): SocialLoan | null => {
+  const eligibility = checkSocialLoanEligibility(memberId, amount);
+  if (!eligibility.eligible) return null;
+
+  const member = getMemberById(memberId);
+  if (!member) return null;
+
+  const settings = getSettings();
+  const interest = calculateInterest(amount, interestRate, interestType);
+
+  const newLoan: SocialLoan = {
+    id: generateId(),
+    memberId,
+    memberName: member.name,
+    principalAmount: amount,
+    interestRate,
+    interestType,
+    interestAmount: interest.interest,
+    totalRepayment: interest.total,
+    amountPaid: 0,
+    status: "pending",
+    requestDate: new Date().toISOString(),
+    dueDate: new Date(Date.now() + period * 24 * 60 * 60 * 1000).toISOString(),
+    rolloverCount: 0,
+  };
+
+  const loans = getSocialLoans();
+  loans.push(newLoan);
+  safeJsonStore(STORAGE_KEYS.SOCIAL_LOANS, loans);
+
+  return newLoan;
+};
+
+// Approve social loan
+export const approveSocialLoan = (loanId: string): boolean => {
+  const loans = getSocialLoans();
+  const loanIndex = loans.findIndex((l) => l.id === loanId);
+  if (loanIndex === -1) return false;
+
+  loans[loanIndex].status = "active";
+  loans[loanIndex].approvalDate = new Date().toISOString();
+
+  safeJsonStore(STORAGE_KEYS.SOCIAL_LOANS, loans);
+
+  // Record as transaction (social loan disbursement)
+  addTransaction({
+    memberId: loans[loanIndex].memberId,
+    memberName: loans[loanIndex].memberName,
+    type: "social_loan_disbursement" as any, // You'll need to add this type
+    amount: loans[loanIndex].principalAmount,
+    date: new Date().toISOString(),
+    description: `Social loan disbursed`,
+  });
+
+  return true;
+};
+
+// Make social loan payment
+export const makeSocialLoanPayment = (
+  loanId: string,
+  amount: number,
+): boolean => {
+  const loans = getSocialLoans();
+  const loanIndex = loans.findIndex((l) => l.id === loanId);
+  if (loanIndex === -1) return false;
+
+  const loan = loans[loanIndex];
+  loan.amountPaid += amount;
+  loan.lastPaymentDate = new Date().toISOString();
+
+  // Check if fully paid
+  if (loan.amountPaid >= loan.totalRepayment) {
+    loan.status = "paid";
+    loan.amountPaid = loan.totalRepayment; // Cap at total
+  }
+
+  safeJsonStore(STORAGE_KEYS.SOCIAL_LOANS, loans);
+
+  // Record transaction
+  addTransaction({
+    memberId: loan.memberId,
+    memberName: loan.memberName,
+    type: "social_loan_repayment" as any,
+    amount: amount,
+    date: new Date().toISOString(),
+    description: `Social loan repayment`,
+  });
+
+  return true;
+};
+
+// Get social pot summary
+
+//New just trying
+
+export const getSocialPotSummary = (): SocialPotSummary => {
+  const members = getMembers();
+  const transactions = getTransactions();
+
+  // Total contributions from all members
+  const totalContributions = members.reduce(
+    (sum, m) => sum + m.socialContributions,
+    0,
+  );
+
+  // Total used for welfare - from transactions
+  const welfareTransactions = transactions.filter(
+    (t) => t.type === "welfare_usage",
+  );
+  const totalUsedForWelfare = welfareTransactions.reduce(
+    (sum, t) => sum + t.amount,
+    0,
+  );
+
+  // Social loans disbursed (money out)
+  const socialLoanDisbursements = transactions.filter(
+    (t) => t.type === "social_loan_disbursement",
+  );
+  const totalDisbursed = socialLoanDisbursements.reduce(
+    (sum, t) => sum + t.amount,
+    0,
+  );
+
+  // Social loans repaid (money back in)
+  const socialLoanRepayments = transactions.filter(
+    (t) => t.type === "social_loan_repayment",
+  );
+  const totalRepaid = socialLoanRepayments.reduce(
+    (sum, t) => sum + t.amount,
+    0,
+  );
+
+  // Currently loaned out = disbursed - repaid
+
+  // Interest earned (repayments include interest, so we need to calculate)
+  // This is simplified - you'd track principal vs interest separately for accuracy
+  const socialLoans = getSocialLoans();
+  const paidLoans = socialLoans.filter((l) => l.status === "paid");
+  const totalInterestEarned = paidLoans.reduce(
+    (sum, l) => sum + l.interestAmount,
+    0,
+  );
+
+  const totalLoanedOut = totalDisbursed - totalRepaid + totalInterestEarned;
+
+  // Available = contributions + interest earned - welfare used - currently loaned
+  const availableForLoans =
+    totalContributions +
+    totalInterestEarned -
+    totalUsedForWelfare -
+    totalLoanedOut;
+  const availableForDistribution =
+    totalContributions + totalInterestEarned - totalUsedForWelfare;
+
+  return {
+    totalContributions,
+    totalUsedForWelfare,
+    totalLoanedOut,
+    totalInterestEarned,
+    availableForLoans: Math.max(0, availableForLoans),
+    availableForDistribution: Math.max(0, availableForDistribution),
+  };
+};
+
+// export const getSocialPotSummary = (): SocialPotSummary => {
+//   const members = getMembers();
+//   const socialLoans = getSocialLoans();
+//   const transactions = getTransactions();
+
+//   // Total contributions from all members
+//   const totalContributions = members.reduce(
+//     (sum, m) => sum + m.socialContributions,
+//     0,
+//   );
+
+//   // Total used for welfare (you'd track this separately)
+//   const welfareUsage = safeJsonParse<
+//     { amount: number; date: string; description: string }[]
+//   >(STORAGE_KEYS.SOCIAL_WELFARE_USAGE, []);
+//   const totalUsedForWelfare = welfareUsage.reduce(
+//     (sum, w) => sum + w.amount,
+//     0,
+//   );
+
+//   // Total currently loaned out (active social loans)
+//   const activeLoans = socialLoans.filter((l) => l.status === "active");
+//   const totalLoanedOut = activeLoans.reduce(
+//     (sum, l) => sum + (l.totalRepayment - l.amountPaid),
+//     0,
+//   );
+
+//   // Total interest earned from paid social loans
+//   const paidLoans = socialLoans.filter((l) => l.status === "paid");
+//   const totalInterestEarned = paidLoans.reduce(
+//     (sum, l) => sum + l.interestAmount,
+//     0,
+//   );
+
+//   // Add interest from partial payments on active loans
+//   const partialInterest = activeLoans.reduce((sum, l) => {
+//     const interestPortion =
+//       l.amountPaid * (l.interestAmount / l.totalRepayment);
+//     return sum + interestPortion;
+//   }, 0);
+
+//   const availableForLoans =
+//     totalContributions +
+//     totalInterestEarned -
+//     totalUsedForWelfare -
+//     totalLoanedOut;
+//   const availableForDistribution =
+//     totalContributions + totalInterestEarned - totalUsedForWelfare;
+
+//   return {
+//     totalContributions,
+//     totalUsedForWelfare,
+//     totalLoanedOut,
+//     totalInterestEarned: totalInterestEarned + partialInterest,
+//     availableForLoans: Math.max(0, availableForLoans),
+//     availableForDistribution: Math.max(0, availableForDistribution),
+//   };
+// };
+
+// Record welfare usage (funeral, medical, etc.)
+export const recordWelfareUsage = (
+  amount: number,
+  description: string,
+  beneficiaryMemberId?: string, // Optional - if it's for a specific member
+): void => {
+  const members = getMembers();
+
+  // If for a specific member, use their name
+  let memberName = "Group Welfare";
+  let memberId = "welfare";
+
+  if (beneficiaryMemberId) {
+    const member = getMemberById(beneficiaryMemberId);
+    if (member) {
+      memberName = member.name;
+      memberId = member.id;
+    }
+  }
+
+  // Record as transaction
+  const transaction: Omit<Transaction, "id"> = {
+    memberId,
+    memberName,
+    type: "welfare_usage",
+    amount,
+    date: new Date().toISOString(),
+    description: description || "Welfare/Emergency usage",
+  };
+
+  const transactions = getTransactions();
+  const newTransaction = {
+    ...transaction,
+    id: generateId(),
+  };
+  transactions.push(newTransaction);
+  safeJsonStore(STORAGE_KEYS.TRANSACTIONS, transactions);
 };
 
 // ============================================
@@ -595,48 +926,49 @@ export const clearAllData = (): void => {
 // SEED DATA FOR DEMO
 // ============================================
 export const seedDemoData = (): void => {
+  return;
   if (getMembers().length > 0) return; // Don't seed if data exists
 
   // Add demo members
-  const demoMembers = [
-    {
-      name: "Mary Mwanza",
-      nrc: "123456/10/1",
-      phone: "+260 97 1234567",
-      status: "active" as const,
-      joinDate: "2024-01-15",
-    },
-    {
-      name: "John Banda",
-      nrc: "234567/10/1",
-      phone: "+260 96 2345678",
-      status: "active" as const,
-      joinDate: "2024-01-15",
-    },
-    {
-      name: "Grace Phiri",
-      nrc: "345678/10/1",
-      phone: "+260 95 3456789",
-      status: "active" as const,
-      joinDate: "2024-02-01",
-    },
-    {
-      name: "Peter Tembo",
-      nrc: "456789/10/1",
-      phone: "+260 97 4567890",
-      status: "active" as const,
-      joinDate: "2024-02-15",
-    },
-    {
-      name: "Sarah Mulenga",
-      nrc: "567890/10/1",
-      phone: "+260 96 5678901",
-      status: "suspended" as const,
-      joinDate: "2024-01-20",
-    },
-  ];
+  // const demoMembers = [
+  //   {
+  //     name: "Mary Mwanza",
+  //     nrc: "123456/10/1",
+  //     phone: "+260 97 1234567",
+  //     status: "active" as const,
+  //     joinDate: "2024-01-15",
+  //   },
+  //   {
+  //     name: "John Banda",
+  //     nrc: "234567/10/1",
+  //     phone: "+260 96 2345678",
+  //     status: "active" as const,
+  //     joinDate: "2024-01-15",
+  //   },
+  //   {
+  //     name: "Grace Phiri",
+  //     nrc: "345678/10/1",
+  //     phone: "+260 95 3456789",
+  //     status: "active" as const,
+  //     joinDate: "2024-02-01",
+  //   },
+  //   {
+  //     name: "Peter Tembo",
+  //     nrc: "456789/10/1",
+  //     phone: "+260 97 4567890",
+  //     status: "active" as const,
+  //     joinDate: "2024-02-15",
+  //   },
+  //   {
+  //     name: "Sarah Mulenga",
+  //     nrc: "567890/10/1",
+  //     phone: "+260 96 5678901",
+  //     status: "suspended" as const,
+  //     joinDate: "2024-01-20",
+  //   },
+  // ];
 
-  demoMembers.forEach((m) => addMember(m));
+  // demoMembers.forEach((m) => addMember(m));
 
   const members = getMembers();
   const settings = getSettings();

@@ -81,34 +81,44 @@ export const getTransactionLabel = (type: string): string => {
     fine: "Fine",
     dividend: "Dividend Payout",
     withdrawal: "Withdrawal",
+    // NEW
+    welfare_usage: "Welfare Usage",
+    social_loan_disbursement: "Social Loan Out",
+    social_loan_repayment: "Social Loan Repayment",
   };
   return labels[type] || type;
 };
 
-// Transaction type colors
+// Update getTransactionColor function
 export const getTransactionColor = (type: string): string => {
   const colors: Record<string, string> = {
-    share_purchase: "text-bank-600",
-    social_contribution: "text-blue-600",
-    birthday_contribution: "text-purple-600",
-    loan_disbursement: "text-orange-600",
-    loan_repayment: "text-bank-600",
-    fine: "text-red-600",
-    dividend: "text-amber-600",
-    withdrawal: "text-red-600",
+    share_purchase: "text-bank-600 bg-bank-50",
+    social_contribution: "text-blue-600 bg-blue-50",
+    birthday_contribution: "text-purple-600 bg-purple-50",
+    loan_disbursement: "text-amber-600 bg-amber-50",
+    loan_repayment: "text-bank-600 bg-bank-50",
+    fine: "text-red-600 bg-red-50",
+    dividend: "text-bank-600 bg-bank-50",
+    withdrawal: "text-red-600 bg-red-50",
+    // NEW
+    welfare_usage: "text-red-600 bg-red-50",
+    social_loan_disbursement: "text-blue-600 bg-blue-50",
+    social_loan_repayment: "text-blue-600 bg-blue-50",
   };
-  return colors[type] || "text-forest-600";
+  return colors[type] || "text-gray-600 bg-gray-50";
 };
 
-// Check if transaction is income
+// Update isIncomeTransaction function
 export const isIncomeTransaction = (type: string): boolean => {
-  return [
+  const incomeTypes = [
     "share_purchase",
     "social_contribution",
     "birthday_contribution",
     "loan_repayment",
     "fine",
-  ].includes(type);
+    "social_loan_repayment", // NEW - money coming back
+  ];
+  return incomeTypes.includes(type);
 };
 
 // Generate loan schedule

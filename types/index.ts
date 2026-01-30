@@ -12,9 +12,27 @@ export interface Member {
   avatar?: string;
 }
 
+// export interface Transaction {
+//   id: string;
+//   memberId: string;
+//   type:
+//     | "share_purchase"
+//     | "social_contribution"
+//     | "birthday_contribution"
+//     | "loan_disbursement"
+//     | "loan_repayment"
+//     | "fine"
+//     | "dividend";
+//   amount: number;
+//   description: string;
+//   date: string;
+//   cycleId: string;
+// }
+
 export interface Transaction {
   id: string;
   memberId: string;
+  memberName: string;
   type:
     | "share_purchase"
     | "social_contribution"
@@ -22,11 +40,14 @@ export interface Transaction {
     | "loan_disbursement"
     | "loan_repayment"
     | "fine"
-    | "dividend";
+    | "dividend"
+    | "withdrawal"
+    | "welfare_usage" // Money taken from social pot for emergencies
+    | "social_loan_disbursement" // Social loan given to member
+    | "social_loan_repayment"; // Social loan repaid by member
   amount: number;
-  description: string;
   date: string;
-  cycleId: string;
+  description: string;
 }
 
 export interface Loan {

@@ -159,7 +159,7 @@ export default function Dashboard() {
             value={formatCurrency(stats.totalSavings)}
             subtitle="All members combined"
             icon={Wallet}
-            trend={{ value: 12.5, isPositive: true }}
+            // trend={{ value: 12.5, isPositive: true }}
             color="blue"
           />
           <StatCard
@@ -174,7 +174,7 @@ export default function Dashboard() {
             value={formatCurrency(stats.totalInterestEarned)}
             subtitle="This cycle"
             icon={TrendingUp}
-            trend={{ value: 8.3, isPositive: true }}
+            // trend={{ value: 8.3, isPositive: true }}
             color="purple"
           />
         </div>

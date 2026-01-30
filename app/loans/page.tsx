@@ -29,7 +29,11 @@ import {
   CheckCircle2,
   XCircle,
   ArrowRight,
+  Calendar,
+  Circle,
+  CircleAlert,
 } from "lucide-react";
+import { penaliseLoan } from "@/utils/database";
 
 export default function LoansPage() {
   const {
@@ -52,8 +56,12 @@ export default function LoansPage() {
   const [formData, setFormData] = useState({
     memberId: "",
     amount: 0,
+    period: 90,
     interestRate: settings.defaultInterestRate,
-    interestType: settings.defaultInterestType as "simple" | "compound",
+    interestType: settings.defaultInterestType as
+      | "normal_simple"
+      | "custom_simple"
+      | "compound",
   });
   const [eligibilityResult, setEligibilityResult] = useState<ReturnType<
     typeof checkEligibility
@@ -90,6 +98,7 @@ export default function LoansPage() {
     createLoan(
       formData.memberId,
       formData.amount,
+      formData.period,
       formData.interestRate,
       formData.interestType,
     );
@@ -97,6 +106,7 @@ export default function LoansPage() {
     setFormData({
       memberId: "",
       amount: 0,
+      period: 90,
       interestRate: settings.defaultInterestRate,
       interestType: settings.defaultInterestType,
     });
@@ -132,6 +142,16 @@ export default function LoansPage() {
     }
   };
 
+  const handlePenalise = (loan: Loan) => {
+    if (
+      window.confirm(
+        `Rollover loan for ${loan.memberName}? The remaining balance will be carried over with new interest.`,
+      )
+    ) {
+      penaliseLoan(loan.id, 100);
+    }
+  };
+
   const openPaymentModal = (loan: Loan) => {
     setSelectedLoan(loan);
     setPaymentAmount(loan.totalRepayment - loan.amountPaid);
@@ -144,6 +164,7 @@ export default function LoansPage() {
           formData.amount,
           formData.interestRate,
           formData.interestType,
+          Math.floor(formData.period / 30),
         )
       : null;
 
@@ -239,7 +260,8 @@ export default function LoansPage() {
       header: "Due Date",
       sortable: true,
       render: (loan) => {
-        const overdue = isOverdue(loan.dueDate) && loan.status === "active";
+        // const overdue = isOverdue(loan.dueDate) && loan.status === "active";
+        const overdue = true && loan.status === "active";
         return (
           <div className="flex items-center gap-2">
             {overdue && (
@@ -493,7 +515,18 @@ export default function LoansPage() {
                         >
                           <DollarSign className="w-4 h-4 text-bank-600 group-hover:text-bank-700" />
                         </button>
-                        {isOverdue(loan.dueDate) && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRollover(loan);
+                          }}
+                          className="p-2.5 rounded-xl hover:bg-red-100 transition-all duration-200 hover:scale-110 group"
+                          title="Penalise Loan"
+                        >
+                          <CircleAlert className="w-4 h-4 text-red-600 group-hover:text-red-700" />
+                        </button>
+                        {/* {isOverdue(loan.dueDate) && ( */}
+                        {true && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -522,6 +555,7 @@ export default function LoansPage() {
             setFormData({
               memberId: "",
               amount: 0,
+              period: 90,
               interestRate: settings.defaultInterestRate,
               interestType: settings.defaultInterestType,
             });
@@ -566,8 +600,8 @@ export default function LoansPage() {
                   value={formData.amount}
                   onChange={(e) => handleAmountChange(Number(e.target.value))}
                   className="w-full pl-12 pr-4 py-3 rounded-xl border border-forest-200 focus:border-bank-500 focus:ring-4 focus:ring-bank-500/20 transition-all duration-200"
-                  min="0"
-                  step="100"
+                  // min="0"
+                  // step="100"
                   placeholder="Enter loan amount"
                   required
                 />
@@ -600,6 +634,27 @@ export default function LoansPage() {
               )}
             </div>
 
+            <div>
+              <label className="block text-sm font-semibold text-forest-700 mb-2 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-600" />
+                Repayment Period (Days) *
+              </label>
+              <input
+                type="number"
+                value={formData.period}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    period: Number(e.target.value),
+                  })
+                }
+                className="w-full px-4 py-3 rounded-xl border border-forest-200 focus:border-bank-500 focus:ring-4 focus:ring-bank-500/20 transition-all duration-200"
+                min="1"
+                placeholder="e.g. 30"
+                required
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-forest-700 mb-2">
@@ -629,12 +684,16 @@ export default function LoansPage() {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      interestType: e.target.value as "simple" | "compound",
+                      interestType: e.target.value as
+                        | "normal_simple"
+                        | "custom_simple"
+                        | "compound",
                     })
                   }
                   className="w-full px-4 py-3 rounded-xl border border-forest-200 focus:border-bank-500 focus:ring-4 focus:ring-bank-500/20 transition-all duration-200 bg-white"
                 >
-                  <option value="simple">Simple Interest</option>
+                  <option value="normal_simple">Normal Simple Interest</option>
+                  <option value="custom_simple">Custom Simple Interest</option>
                   <option value="compound">Compound Interest</option>
                 </select>
               </div>
@@ -677,8 +736,8 @@ export default function LoansPage() {
                     </div>
                   </div>
                   <p className="text-sm text-amber-700 text-center mt-4 font-medium">
-                    Due in {settings.loanTermDays} days •{" "}
-                    {formData.interestType} interest
+                    Due in {formData.period} days • {formData.interestType}{" "}
+                    interest
                   </p>
                 </div>
               </div>
@@ -692,6 +751,7 @@ export default function LoansPage() {
                   setFormData({
                     memberId: "",
                     amount: 0,
+                    period: 90,
                     interestRate: settings.defaultInterestRate,
                     interestType: settings.defaultInterestType,
                   });

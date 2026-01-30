@@ -42,7 +42,7 @@ export interface Loan {
   memberName: string;
   principalAmount: number;
   interestRate: number;
-  interestType: "simple" | "compound";
+  interestType: "normal_simple" | "custom_simple" | "compound";
   interestAmount: number;
   totalRepayment: number;
   amountPaid: number;
@@ -86,7 +86,8 @@ export interface Settings {
   socialContributionAmount: number;
   birthdayContributionAmount: number;
   defaultInterestRate: number;
-  defaultInterestType: "simple" | "compound";
+  defaultInterestType: "normal_simple" | "custom_simple" | "compound";
+
   maxLoanMultiplier: number;
   loanTermDays: number;
   latePenaltyRate: number;
@@ -131,7 +132,7 @@ export interface SocialLoan {
   memberName: string;
   principalAmount: number;
   interestRate: number;
-  interestType: "simple" | "compound";
+  interestType: "normal_simple" | "custom_simple" | "compound";
   interestAmount: number;
   totalRepayment: number;
   amountPaid: number;

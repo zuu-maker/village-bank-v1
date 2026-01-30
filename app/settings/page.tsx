@@ -330,17 +330,28 @@ export default function SettingsPage() {
                           setFormData({
                             ...formData,
                             defaultInterestType: e.target.value as
-                              | "simple"
+                              | "custom_simple"
+                              | "normal_simple"
                               | "compound",
                           })
                         }
                         className="w-full px-4 py-3 rounded-xl border border-forest-200 focus:border-bank-500 focus:ring-4 focus:ring-bank-500/20 transition-all duration-200 bg-white"
                       >
-                        <option value="simple">Simple Interest</option>
+                        <option value="normal_simple">
+                          Normal Simple Interest
+                        </option>
+                        <option value="custom_simple">
+                          Custom Simple Interest
+                        </option>
                         <option value="compound">Compound Interest</option>
                       </select>
                       <p className="text-xs text-forest-500 mt-2 font-medium">
-                        Interest calculation method
+                        Interest calculation method:{" "}
+                        {formData.defaultInterestType === "compound"
+                          ? ""
+                          : formData.defaultInterestType === "normal_simple"
+                            ? "Prinical * Rate * Time"
+                            : "Prinicipal * Rate"}
                       </p>
                     </div>
 

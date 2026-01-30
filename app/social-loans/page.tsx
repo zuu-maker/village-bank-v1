@@ -114,6 +114,7 @@ export default function SocialLoansPage() {
     setFormData({
       memberId: "",
       amount: 0,
+      period: 30,
       interestRate: settings.defaultInterestRate,
       interestType: settings.defaultInterestType,
     });
@@ -214,6 +215,7 @@ export default function SocialLoansPage() {
       header: "Due Date",
       sortable: true,
       render: (loan) => {
+        // change this please
         // const overdue = isOverdue(loan.dueDate) && loan.status === "active";
         const overdue = true && loan.status === "active";
         return (

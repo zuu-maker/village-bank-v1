@@ -182,10 +182,11 @@ export const useLoans = (memberId?: string) => {
     (
       memberId: string,
       amount: number,
+      period: number,
       rate?: number,
-      type?: "simple" | "compound",
+      type?: "normal_simple" | "custom_simple" | "compound",
     ) => {
-      const newLoan = db.createLoan(memberId, amount, rate, type);
+      const newLoan = db.createLoan(memberId, amount, period, rate, type);
       refresh();
       return newLoan;
     },
@@ -205,6 +206,14 @@ export const useLoans = (memberId?: string) => {
     (loanId: string, amount: number) => {
       const result = db.makeLoanPayment(loanId, amount);
       refresh();
+      return result;
+    },
+    [refresh],
+  );
+
+  const penalise = useCallback(
+    (loanId: string, penalty: number) => {
+      const result = db.penaliseLoan(loanId, penalty);
       return result;
     },
     [refresh],

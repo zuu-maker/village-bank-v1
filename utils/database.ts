@@ -116,7 +116,7 @@ export const createSocialLoan = (
   amount: number,
   period: number,
   interestRate: number,
-  interestType: "simple" | "compound",
+  interestType: "normal_simple" | "custom_simple" | "compound",
 ): SocialLoan | null => {
   const eligibility = checkSocialLoanEligibility(memberId, amount);
   if (!eligibility.eligible) return null;
@@ -125,7 +125,12 @@ export const createSocialLoan = (
   if (!member) return null;
 
   const settings = getSettings();
-  const interest = calculateInterest(amount, interestRate, interestType);
+  const interest = calculateInterest(
+    amount,
+    interestRate,
+    interestType,
+    Math.floor(period / 30),
+  );
 
   const newLoan: SocialLoan = {
     id: generateId(),
@@ -387,7 +392,7 @@ export const getDefaultSettings = (): Settings => ({
   socialContributionAmount: 50,
   birthdayContributionAmount: 20,
   defaultInterestRate: 10,
-  defaultInterestType: "simple",
+  defaultInterestType: "normal_simple",
   maxLoanMultiplier: 3,
   loanTermDays: 30,
   latePenaltyRate: 10,
@@ -553,15 +558,21 @@ export const getActiveLoans = (): Loan[] => {
 export const calculateInterest = (
   principal: number,
   rate: number,
-  type: "simple" | "compound",
+  type: "normal_simple" | "custom_simple" | "compound",
   timeInMonths: number = 1,
 ): InterestCalculation => {
   let interest: number;
   let total: number;
 
-  if (type === "simple") {
+  if (type === "normal_simple") {
     // Simple Interest: I = P * r * t
+
+    // maybe make this a setting?
     interest = principal * (rate / 100) * timeInMonths;
+
+    total = principal + interest;
+  } else if (type === "custom_simple") {
+    interest = principal * (rate / 100);
     total = principal + interest;
   } else {
     // Compound Interest: A = P(1 + r)^t - P
@@ -623,8 +634,9 @@ export const checkLoanEligibility = (
 export const createLoan = (
   memberId: string,
   principalAmount: number,
+  period: number,
   interestRate?: number,
-  interestType?: "simple" | "compound",
+  interestType?: "normal_simple" | "custom_simple" | "compound",
 ): Loan | null => {
   const member = getMemberById(memberId);
   const settings = getSettings();
@@ -633,10 +645,15 @@ export const createLoan = (
 
   const rate = interestRate ?? settings.defaultInterestRate;
   const type = interestType ?? settings.defaultInterestType;
-  const calculation = calculateInterest(principalAmount, rate, type);
+  const calculation = calculateInterest(
+    principalAmount,
+    rate,
+    type,
+    Math.floor(period / 30),
+  );
 
   const dueDate = new Date();
-  dueDate.setDate(dueDate.getDate() + settings.loanTermDays);
+  dueDate.setDate(dueDate.getDate() + period);
 
   const loans = getLoans();
   const newLoan: Loan = {
@@ -658,6 +675,23 @@ export const createLoan = (
   loans.push(newLoan);
   safeJsonStore(STORAGE_KEYS.LOANS, loans);
   return newLoan;
+};
+
+export const penaliseLoan = (loanId: string, penalty: number): Loan | null => {
+  const loans = getLoans();
+  const index = loans.findIndex((l) => l.id === loanId);
+
+  if (index === -1) return null;
+  const loan = loans[index];
+  loans[index] = {
+    ...loan,
+    lastPaymentDate: new Date().toISOString(),
+    totalRepayment: loan.totalRepayment + penalty,
+  };
+  safeJsonStore(STORAGE_KEYS.LOANS, loans);
+
+  // check if you will need to make a trans
+  return loans[index];
 };
 
 export const approveLoan = (loanId: string): Loan | null => {

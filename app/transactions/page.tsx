@@ -17,7 +17,12 @@ import Layout from "@/components/Layout";
 import Modal from "@/components/Modal";
 import DataTable, { Column } from "@/components/DataTable";
 import Alert from "@/components/Alert";
-import { useTransactions, useMembers, useSettings } from "@/hooks/useDatabase";
+import {
+  useTransactions,
+  useMembers,
+  useSettings,
+  useCycles,
+} from "@/hooks/useDatabase";
 import { Transaction, Member } from "@/utils/types";
 import {
   formatCurrency,
@@ -29,6 +34,7 @@ import {
 
 export default function TransactionsPage() {
   const { transactions, loading, addTransaction, refresh } = useTransactions();
+  const { activeCycle } = useCycles();
   const { members } = useMembers();
   const { settings } = useSettings();
   const [mounted, setMounted] = useState(false);
@@ -75,6 +81,18 @@ export default function TransactionsPage() {
         type: "error",
         message: "Please fill in all required fields.",
       });
+
+      window.alert("Please fill in all required fields.");
+      return;
+    }
+
+    if (!activeCycle) {
+      setAlert({
+        type: "error",
+        message: "Please make sure you have an active cycle.",
+      });
+      window.alert("Please make sure you have an active cycle.");
+
       return;
     }
 
@@ -91,16 +109,17 @@ export default function TransactionsPage() {
     }
 
     // Validate share purchase amount
-    if (
-      formData.type === "share_purchase" &&
-      amount % settings.sharePrice !== 0
-    ) {
-      setAlert({
-        type: "error",
-        message: `Share purchases must be multiples of ${settings.currency}${settings.sharePrice}`,
-      });
-      return;
-    }
+    // if (
+    //   formData.type === "share_purchase"
+    //   // &&
+    //   // amount % settings.sharePrice !== 0
+    // ) {
+    //   setAlert({
+    //     type: "error",
+    //     message: `Share purchases must be multiples of ${settings.currency}${settings.sharePrice}`,
+    //   });
+    //   return;
+    // }
 
     try {
       addTransaction({
@@ -122,6 +141,7 @@ export default function TransactionsPage() {
       resetForm();
       refresh();
     } catch (error) {
+      console.log(error);
       setAlert({
         type: "error",
         message: "An error occurred. Please try again.",
@@ -749,10 +769,10 @@ export default function TransactionsPage() {
               <p className="text-sm text-bank-600 mt-2 flex items-center gap-1">
                 <span className="w-1 h-1 rounded-full bg-bank-600" />
                 Equals{" "}
-                {Math.floor(
+                {/* {Math.floor(
                   parseFloat(formData.amount) / settings.sharePrice,
-                )}{" "}
-                shares
+                )} */}
+                {parseFloat(formData.amount) / settings.sharePrice} shares
               </p>
             )}
           </div>

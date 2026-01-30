@@ -521,7 +521,33 @@ export default function CyclesPage() {
                     </p>
                   </div>
                 </div>
-                <div className="p-5 bg-white rounded-xl border-2 border-bank-300">
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="p-5 bg-white rounded-xl border-2 border-bank-300">
+                    <p className="text-sm font-semibold text-forest-600 mb-2">
+                      Dividend Per Share
+                    </p>
+                    <p className="text-4xl font-bold text-bank-700">
+                      {formatCurrency(dividendPerShare)}
+                    </p>
+                    <p className="text-xs text-forest-500 mt-2 font-medium">
+                      Formula: Total Profit ÷ Total Shares ={" "}
+                      {formatCurrency(totalProfit)} ÷ {totalShares}
+                    </p>
+                  </div>
+                  <div className="p-5 bg-white rounded-xl border-2 border-bank-300">
+                    <p className="text-sm font-semibold text-forest-600 mb-2">
+                      Percent Made
+                    </p>
+                    <p className="text-4xl font-bold text-bank-700">
+                      {(totalProfit / potSummary.savingsPot) * 100}%
+                    </p>
+                    <p className="text-xs text-forest-500 mt-2 font-medium">
+                      Formula: Total Profit ÷ Group Savings = {totalProfit} ÷{" "}
+                      {potSummary.savingsPot}
+                    </p>
+                  </div>
+                </div>
+                {/* <div className="p-5 bg-white rounded-xl border-2 border-bank-300">
                   <p className="text-sm font-semibold text-forest-600 mb-2">
                     Dividend Per Share
                   </p>
@@ -532,7 +558,7 @@ export default function CyclesPage() {
                     Formula: Total Profit ÷ Total Shares ={" "}
                     {formatCurrency(totalProfit)} ÷ {totalShares}
                   </p>
-                </div>
+                </div> */}
               </div>
             </div>
 

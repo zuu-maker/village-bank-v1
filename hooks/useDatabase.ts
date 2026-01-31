@@ -214,6 +214,7 @@ export const useLoans = (memberId?: string) => {
   const penalise = useCallback(
     (loanId: string, penalty: number) => {
       const result = db.penaliseLoan(loanId, penalty);
+      refresh();
       return result;
     },
     [refresh],
@@ -236,6 +237,8 @@ export const useLoans = (memberId?: string) => {
     approveLoan,
     makePayment,
     rolloverLoan,
+
+    penalise,
     checkEligibility: db.checkLoanEligibility,
     calculateInterest: db.calculateInterest,
     getActiveLoans: db.getActiveLoans,

@@ -9,6 +9,7 @@ import {
   useTransactions,
   useLoans,
   useSettings,
+  useSocialLoans,
 } from "@/hooks/useDatabase";
 import { Transaction, Loan, Member } from "@/utils/types";
 import {
@@ -41,7 +42,10 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Edit,
+  FileDown,
 } from "lucide-react";
+import { getSocialLoansByMember } from "@/utils/database";
+import { generateMemberPDF } from "@/utils/pdfGenerator";
 
 interface MemberPageProps {
   params: {
@@ -57,18 +61,14 @@ export default function MemberPage() {
   const { members } = useMembers();
   const { transactions } = useTransactions();
   const { loans } = useLoans();
+  const { getActiveSocialLoans } = useSocialLoans();
   const { settings } = useSettings();
-  const [activeTab, setActiveTab] = useState<"transactions" | "loans">(
-    "transactions",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "transactions" | "loans" | "social_loans"
+  >("transactions");
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   const params = useParams();
-
-  // useEffect(() => {
-  //   console.log(params);
-  // }, []);
-
-  // console.log(params);
 
   // Find the member
   const member = members.find((m) => m.id === params.id);
@@ -89,6 +89,8 @@ export default function MemberPage() {
     );
   }
 
+  const socialLoans = getSocialLoansByMember(member.id);
+
   // Filter member's data
   const memberTransactions = transactions.filter(
     (t) => t.memberId === member.id,
@@ -108,6 +110,31 @@ export default function MemberPage() {
   // Calculate loan eligibility
   const maxLoanAmount = member.totalSavings * settings.maxLoanMultiplier;
   const availableCredit = maxLoanAmount - outstandingBalance;
+
+  // Generate PDF Report (Client-side)
+  const handleGeneratePDF = () => {
+    setGeneratingPdf(true);
+    try {
+      generateMemberPDF({
+        member,
+        transactions: memberTransactions,
+        loans: memberLoans,
+        socialLoans,
+        settings,
+        stats: {
+          maxLoanAmount,
+          outstandingBalance,
+          availableCredit,
+          activeLoansCount: activeLoans.length,
+        },
+      });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Failed to generate PDF. Please try again.");
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
 
   // Transaction columns
   const transactionColumns: Column<Transaction>[] = [
@@ -270,7 +297,7 @@ export default function MemberPage() {
                 <Clock className="w-3 h-3" />
                 Active
               </span>
-            ) : loan.status === "completed" ? (
+            ) : loan.status === "paid" ? (
               <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 font-bold text-sm rounded-lg">
                 <CheckCircle2 className="w-3 h-3" />
                 Paid
@@ -351,14 +378,7 @@ export default function MemberPage() {
                         </span>
                       </div>
                     )}
-                    {member.address && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        <span className="text-sm font-medium">
-                          {member.address}
-                        </span>
-                      </div>
-                    )}
+
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
                       <span className="text-sm font-medium">
@@ -369,17 +389,15 @@ export default function MemberPage() {
                 </div>
               </div>
 
-              {/* Edit Button */}
-              {/* <button
-                  onClick={() => {
-                    // This would open an edit modal - implement as needed
-                    alert("Edit member functionality - to be implemented");
-                  }}
-                  className="group relative inline-flex items-center gap-2 px-6 py-3 bg-white/95 backdrop-blur-md text-bank-700 font-bold rounded-xl shadow-2xl hover:shadow-white/20 transition-all duration-300 hover:scale-105"
-                >
-                  <Edit className="w-5 h-5" />
-                  Edit Profile
-                </button> */}
+              {/* Generate PDF Button */}
+              <button
+                onClick={handleGeneratePDF}
+                disabled={generatingPdf}
+                className="group relative inline-flex items-center gap-2 px-6 py-3 bg-white/95 backdrop-blur-md text-bank-700 font-bold rounded-xl shadow-2xl hover:shadow-white/20 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                <FileDown className="w-5 h-5" />
+                {generatingPdf ? "Generating..." : "Generate PDF Report"}
+              </button>
             </div>
           </div>
         </div>
@@ -545,11 +563,24 @@ export default function MemberPage() {
                 Loans ({memberLoans.length})
               </div>
             </button>
+            <button
+              onClick={() => setActiveTab("social_loans")}
+              className={`flex-1 px-6 py-4 font-bold transition-all duration-200 ${
+                activeTab === "social_loans"
+                  ? "bg-blue-50 text-blue-700 border-b-2 border-blue-600"
+                  : "text-forest-600 hover:bg-forest-50"
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <HandCoins className="w-5 h-5" />
+                Social Loans ({socialLoans.length})
+              </div>
+            </button>
           </div>
 
           {/* Tab Content */}
           <div className="p-6">
-            {activeTab === "transactions" ? (
+            {activeTab === "transactions" && (
               <DataTable
                 columns={transactionColumns}
                 data={
@@ -562,7 +593,8 @@ export default function MemberPage() {
                 emptyMessage="No transactions found for this member."
                 pageSize={10}
               />
-            ) : (
+            )}
+            {activeTab === "loans" && (
               <DataTable
                 columns={loanColumns}
                 data={memberLoans as unknown as Record<string, unknown>[]}
@@ -571,6 +603,18 @@ export default function MemberPage() {
                 searchPlaceholder="Search loans..."
                 searchKeys={["status"]}
                 emptyMessage="No loans found for this member."
+                pageSize={10}
+              />
+            )}
+            {activeTab === "social_loans" && (
+              <DataTable
+                columns={loanColumns}
+                data={socialLoans as unknown as Record<string, unknown>[]}
+                keyExtractor={(item) => (item as unknown as Loan).id}
+                searchable
+                searchPlaceholder="Search loans..."
+                searchKeys={["status"]}
+                emptyMessage="No social loans found for this member."
                 pageSize={10}
               />
             )}

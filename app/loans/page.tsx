@@ -32,6 +32,8 @@ import {
   Calendar,
   Circle,
   CircleAlert,
+  Wallet,
+  TrendingDown,
 } from "lucide-react";
 import { penaliseLoan } from "@/utils/database";
 
@@ -44,14 +46,17 @@ export default function LoansPage() {
     rolloverLoan,
     checkEligibility,
     calculateInterest,
+    penalise,
   } = useLoans();
   const { members } = useMembers();
   const { settings } = useSettings();
   const [showModal, setShowModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showFineModal, setShowFineModal] = useState(false);
   const [showCalculatorModal, setShowCalculatorModal] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
+  const [fineAmount, setFineAmount] = useState(0);
 
   const [formData, setFormData] = useState({
     memberId: "",
@@ -74,6 +79,34 @@ export default function LoansPage() {
   const totalOutstanding = activeLoans.reduce(
     (sum, l) => sum + (l.totalRepayment - l.amountPaid),
     0,
+  );
+
+  // NEW STATS CALCULATIONS
+
+  // Currently Loaned: Total amount still owed (principal + interest - payments made)
+  const currentlyLoaned = activeLoans.reduce(
+    (sum, l) => sum + (l.totalRepayment - l.amountPaid),
+    0,
+  );
+
+  // Available to Loan: Calculate based on actual pot
+  // Start with total savings pot
+  const totalActiveMemberSavings = activeMembers.reduce(
+    (sum, m) => sum + m.totalSavings,
+    0,
+  );
+
+  // Add back all loan repayments that have been made
+  const totalLoanRepayments = loans.reduce((sum, l) => sum + l.amountPaid, 0);
+
+  // Subtract all loan disbursements (what we gave out)
+  const totalLoanDisbursements = loans
+    .filter((l) => l.status === "active" || l.status === "paid")
+    .reduce((sum, l) => sum + l.principalAmount, 0);
+
+  const availableToLoan = Math.max(
+    0,
+    totalActiveMemberSavings + totalLoanRepayments - totalLoanDisbursements,
   );
 
   const handleMemberChange = (memberId: string) => {
@@ -142,20 +175,24 @@ export default function LoansPage() {
     }
   };
 
-  const handlePenalise = (loan: Loan) => {
-    if (
-      window.confirm(
-        `Rollover loan for ${loan.memberName}? The remaining balance will be carried over with new interest.`,
-      )
-    ) {
-      penaliseLoan(loan.id, 100);
-    }
+  const handlePenalise = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLoan || fineAmount <= 0) return;
+    penalise(selectedLoan.id, fineAmount);
+    setShowFineModal(false);
+    setSelectedLoan(null);
+    setFineAmount(0);
   };
 
   const openPaymentModal = (loan: Loan) => {
     setSelectedLoan(loan);
     setPaymentAmount(loan.totalRepayment - loan.amountPaid);
     setShowPaymentModal(true);
+  };
+
+  const openFineModal = (loan: Loan) => {
+    setSelectedLoan(loan);
+    setShowFineModal(true);
   };
 
   const interestPreview =
@@ -260,8 +297,7 @@ export default function LoansPage() {
       header: "Due Date",
       sortable: true,
       render: (loan) => {
-        // const overdue = isOverdue(loan.dueDate) && loan.status === "active";
-        const overdue = true && loan.status === "active";
+        const overdue = isOverdue(loan.dueDate) && loan.status === "active";
         return (
           <div className="flex items-center gap-2">
             {overdue && (
@@ -446,6 +482,51 @@ export default function LoansPage() {
             </div>
           </div>
 
+          {/* NEW STATS ROW - Currently Loaned & Available to Loan */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
+            {/* Currently Loaned */}
+            <div className="group relative rounded-2xl bg-white p-6 border border-forest-100 hover:border-purple-300 hover:shadow-xl transition-all duration-300">
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-purple-500 to-purple-400 rounded-t-2xl opacity-50 group-hover:opacity-100 transition-opacity" />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-forest-500 uppercase tracking-wide">
+                    Currently Loaned
+                  </p>
+                  <p className="text-2xl lg:text-3xl font-bold text-purple-600 mt-2">
+                    {formatCurrency(currentlyLoaned)}
+                  </p>
+                  <p className="text-xs text-forest-500 mt-1">
+                    Total outstanding (principal + interest)
+                  </p>
+                </div>
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <TrendingDown className="w-7 h-7 text-purple-600" />
+                </div>
+              </div>
+            </div>
+
+            {/* Available to Loan */}
+            <div className="group relative rounded-2xl bg-white p-6 border border-forest-100 hover:border-green-300 hover:shadow-xl transition-all duration-300">
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-green-500 to-green-400 rounded-t-2xl opacity-50 group-hover:opacity-100 transition-opacity" />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-forest-500 uppercase tracking-wide">
+                    Available to Loan
+                  </p>
+                  <p className="text-2xl lg:text-3xl font-bold text-green-600 mt-2">
+                    {formatCurrency(availableToLoan)}
+                  </p>
+                  <p className="text-xs text-forest-500 mt-1">
+                    Funds available for new loans
+                  </p>
+                </div>
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Wallet className="w-7 h-7 text-green-600" />
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Overdue Alert */}
           {overdueLoans.length > 0 && (
             <div className="relative rounded-2xl bg-gradient-to-r from-red-50 to-orange-50 p-6 border-l-4 border-red-500 shadow-lg animate-slide-up">
@@ -518,15 +599,14 @@ export default function LoansPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleRollover(loan);
+                            openFineModal(loan);
                           }}
                           className="p-2.5 rounded-xl hover:bg-red-100 transition-all duration-200 hover:scale-110 group"
                           title="Penalise Loan"
                         >
                           <CircleAlert className="w-4 h-4 text-red-600 group-hover:text-red-700" />
                         </button>
-                        {/* {isOverdue(loan.dueDate) && ( */}
-                        {true && (
+                        {isOverdue(loan.dueDate) && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -600,8 +680,6 @@ export default function LoansPage() {
                   value={formData.amount}
                   onChange={(e) => handleAmountChange(Number(e.target.value))}
                   className="w-full pl-12 pr-4 py-3 rounded-xl border border-forest-200 focus:border-bank-500 focus:ring-4 focus:ring-bank-500/20 transition-all duration-200"
-                  // min="0"
-                  // step="100"
                   placeholder="Enter loan amount"
                   required
                 />
@@ -892,6 +970,90 @@ export default function LoansPage() {
                   disabled={paymentAmount <= 0}
                 >
                   Record Payment
+                </button>
+              </div>
+            </form>
+          )}
+        </Modal>
+
+        <Modal
+          isOpen={showFineModal}
+          onClose={() => {
+            setShowFineModal(false);
+            setSelectedLoan(null);
+            setFineAmount(0);
+          }}
+          title="Apply Loan Penalty"
+        >
+          {selectedLoan && (
+            <form onSubmit={handlePenalise} className="space-y-5">
+              <div className="p-5 bg-gradient-to-br from-forest-50 to-white rounded-xl border border-forest-200">
+                <p className="text-sm font-semibold text-forest-500 uppercase tracking-wide mb-2">
+                  Loan Details
+                </p>
+                <p className="text-xl font-bold text-forest-900 mb-3">
+                  {selectedLoan.memberName}
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-white rounded-lg border border-forest-100">
+                    <p className="text-xs text-forest-500 font-medium">
+                      Outstanding
+                    </p>
+                    <p className="text-lg font-bold text-red-600 mt-1">
+                      {formatCurrency(
+                        selectedLoan.totalRepayment - selectedLoan.amountPaid,
+                      )}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white rounded-lg border border-forest-100">
+                    <p className="text-xs text-forest-500 font-medium">
+                      Total Due
+                    </p>
+                    <p className="text-lg font-bold text-forest-900 mt-1">
+                      {formatCurrency(selectedLoan.totalRepayment)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-forest-700 mb-2">
+                  Penalty Amount ({settings.currency}) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-forest-500 font-semibold">
+                    {settings.currency}
+                  </span>
+                  <input
+                    type="number"
+                    value={fineAmount}
+                    onChange={(e) => setFineAmount(Number(e.target.value))}
+                    className="w-full pl-12 pr-4 py-3 rounded-xl border border-forest-200 focus:border-bank-500 focus:ring-4 focus:ring-bank-500/20 transition-all duration-200"
+                    step="0.01"
+                    placeholder="Enter payment amount"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFineModal(false);
+                    setSelectedLoan(null);
+                    setFineAmount(0);
+                  }}
+                  className="flex-1 px-6 py-3 rounded-xl border-2 border-forest-200 text-forest-700 font-semibold hover:bg-forest-50 hover:border-forest-300 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 text-white font-semibold hover:from-amber-700 hover:to-amber-600 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  disabled={fineAmount <= 0}
+                >
+                  Fine Loan
                 </button>
               </div>
             </form>

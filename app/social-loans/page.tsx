@@ -29,6 +29,7 @@ import {
   ArrowUpRight,
   Percent,
   Calendar,
+  FileCheck,
 } from "lucide-react";
 
 export default function SocialLoansPage() {
@@ -215,9 +216,7 @@ export default function SocialLoansPage() {
       header: "Due Date",
       sortable: true,
       render: (loan) => {
-        // change this please
-        // const overdue = isOverdue(loan.dueDate) && loan.status === "active";
-        const overdue = true && loan.status === "active";
+        const overdue = isOverdue(loan.dueDate) && loan.status === "active";
         return (
           <div className="flex items-center gap-2">
             {overdue && (
@@ -343,7 +342,7 @@ export default function SocialLoansPage() {
             </div>
           </div>
 
-          {/* Social Pot Stats */}
+          {/* Social Pot Stats - First Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {/* Total Contributions */}
             <div className="group relative rounded-2xl bg-white p-6 border border-forest-100 hover:border-blue-300 hover:shadow-xl transition-all duration-300">
@@ -413,6 +412,51 @@ export default function SocialLoansPage() {
                 </div>
                 <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-bank-100 to-bank-50 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <TrendingUp className="w-7 h-7 text-bank-600" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* NEW STATS ROW - Active & Pending Loans */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
+            {/* Active Loans */}
+            <div className="group relative rounded-2xl bg-white p-6 border border-forest-100 hover:border-green-300 hover:shadow-xl transition-all duration-300">
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-green-500 to-green-400 rounded-t-2xl opacity-50 group-hover:opacity-100 transition-opacity" />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-forest-500 uppercase tracking-wide">
+                    Active Loans
+                  </p>
+                  <p className="text-3xl font-bold text-green-600 mt-2">
+                    {activeLoans.length}
+                  </p>
+                  <p className="text-xs text-forest-500 mt-1">
+                    Currently being repaid
+                  </p>
+                </div>
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <CheckCircle2 className="w-7 h-7 text-green-600" />
+                </div>
+              </div>
+            </div>
+
+            {/* Pending Loans */}
+            <div className="group relative rounded-2xl bg-white p-6 border border-forest-100 hover:border-amber-300 hover:shadow-xl transition-all duration-300">
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-amber-400 rounded-t-2xl opacity-50 group-hover:opacity-100 transition-opacity" />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-forest-500 uppercase tracking-wide">
+                    Pending Approval
+                  </p>
+                  <p className="text-3xl font-bold text-amber-600 mt-2">
+                    {pendingLoans.length}
+                  </p>
+                  <p className="text-xs text-forest-500 mt-1">
+                    Awaiting approval
+                  </p>
+                </div>
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileCheck className="w-7 h-7 text-amber-600" />
                 </div>
               </div>
             </div>

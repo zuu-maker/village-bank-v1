@@ -8,6 +8,7 @@ import {
   useMembers,
   useSettings,
   useDashboard,
+  useLoans,
 } from "@/hooks/useDatabase";
 import { formatCurrency, formatDate, getStatusColor } from "@/utils/helpers";
 import {
@@ -29,8 +30,12 @@ export default function CyclesPage() {
   const { members } = useMembers();
   const { settings } = useSettings();
   const { stats, potSummary } = useDashboard();
+  const { loans } = useLoans();
   const [showModal, setShowModal] = useState(false);
   const [showShareoutModal, setShowShareoutModal] = useState(false);
+  const [distributionMethod, setDistributionMethod] = useState<"safe" | "full">(
+    "safe",
+  );
 
   const [formData, setFormData] = useState({
     name: "",
@@ -42,8 +47,62 @@ export default function CyclesPage() {
 
   const activeMembers = members.filter((m) => m.status === "active");
   const totalShares = members.reduce((sum, m) => sum + m.totalShares, 0);
-  const totalProfit = stats.totalInterestEarned;
-  const dividendPerShare = totalShares > 0 ? totalProfit / totalShares : 0;
+
+  // Calculate outstanding loans using the working formula
+  const activeLoans = loans.filter((l) => l.status === "active");
+  const totalOutstanding = activeLoans.reduce(
+    (sum, l) => sum + (l.totalRepayment - l.amountPaid),
+    0,
+  );
+
+  // Calculate available to loan using the working formula
+  const totalActiveMemberSavings = activeMembers.reduce(
+    (sum, m) => sum + m.totalSavings,
+    0,
+  );
+
+  const totalLoanRepayments = loans.reduce((sum, l) => sum + l.amountPaid, 0);
+
+  const totalLoanDisbursements = loans
+    .filter(
+      (l) =>
+        (l.status === "active" || l.status === "paid") && l.rolloverCount === 0,
+    )
+    .reduce((sum, l) => sum + l.principalAmount, 0);
+
+  const availableCash = Math.max(
+    0,
+    totalActiveMemberSavings + totalLoanRepayments - totalLoanDisbursements,
+  );
+
+  const projectedTotalSavings = availableCash + totalOutstanding;
+
+  const totalProfit = projectedTotalSavings - potSummary.savingsPot;
+  // SAFE CALCULATION (RECOMMENDED)
+  const safeProfit = Math.min(totalProfit, availableCash * 0.9); // Keep 10% buffer
+  const safeDividendPerShare = totalShares > 0 ? safeProfit / totalShares : 0;
+
+  // OPTIMISTIC CALCULATION (RISKY)
+  const fullDividendPerShare = totalShares > 0 ? totalProfit / totalShares : 0;
+
+  // Reserved profit (if using safe method)
+  const reservedProfit = totalProfit - safeProfit;
+
+  // Check if it's safe to close cycle
+  const canSafelyClose = activeLoans.length === 0;
+  const hasOutstandingLoans = activeLoans.length > 0;
+
+  // Choose which dividend to use based on distribution method
+  const dividendPerShare =
+    distributionMethod === "safe" ? safeDividendPerShare : fullDividendPerShare;
+  const distributingProfit =
+    distributionMethod === "safe" ? safeProfit : totalProfit;
+
+  // Calculate profit percentage
+  const profitPercentage =
+    potSummary.savingsPot > 0
+      ? ((totalProfit / potSummary.savingsPot) * 100).toFixed(2)
+      : "0.00";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,11 +119,13 @@ export default function CyclesPage() {
 
   const handleCloseCycle = () => {
     if (!activeCycle) return;
-    if (
-      window.confirm(
-        "Are you sure you want to close this cycle? This will calculate final dividends and mark the cycle as closed.",
-      )
-    ) {
+
+    const confirmMessage =
+      distributionMethod === "safe"
+        ? `Close cycle with SAFE distribution?\n\nDistributing Now: ${formatCurrency(safeProfit)}\nReserved for Later: ${formatCurrency(reservedProfit)}\n\nThe reserved amount will be distributed when all loans are repaid.`
+        : `Close cycle with FULL distribution?\n\n⚠️ WARNING: This assumes all ${activeLoans.length} loans will be repaid!\nDistributing: ${formatCurrency(totalProfit)}\n\nThis is RISKY if loans default!`;
+
+    if (window.confirm(confirmMessage)) {
       closeCycle(activeCycle.id);
       setShowShareoutModal(false);
     }
@@ -72,10 +133,6 @@ export default function CyclesPage() {
 
   return (
     <>
-      <Head>
-        <title>Cycles | Village Banking System</title>
-      </Head>
-
       <Layout title="Cycles">
         <div className="space-y-6 lg:space-y-8 animate-fade-in">
           {/* Header Section */}
@@ -230,7 +287,7 @@ export default function CyclesPage() {
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {/* Total Profit */}
-            <div className="group relative rounded-2xl bg-white p-6 border border-forest-100 hover:border-bank-300 hover:shadow-xl transition-all duration-300">
+            {/* <div className="group relative rounded-2xl bg-white p-6 border border-forest-100 hover:border-bank-300 hover:shadow-xl transition-all duration-300">
               <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-bank-500 to-bank-400 rounded-t-2xl opacity-50 group-hover:opacity-100 transition-opacity" />
               <div className="flex items-center justify-between">
                 <div>
@@ -247,7 +304,7 @@ export default function CyclesPage() {
               </div>
             </div>
 
-            {/* Dividend per Share */}
+     
             <div className="group relative rounded-2xl bg-white p-6 border border-forest-100 hover:border-purple-300 hover:shadow-xl transition-all duration-300">
               <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-purple-500 to-purple-400 rounded-t-2xl opacity-50 group-hover:opacity-100 transition-opacity" />
               <div className="flex items-center justify-between">
@@ -256,14 +313,15 @@ export default function CyclesPage() {
                     Dividend/Share
                   </p>
                   <p className="text-3xl font-bold text-purple-600 mt-2">
-                    {formatCurrency(dividendPerShare)}
+                    {formatCurrency(safeDividendPerShare)}
                   </p>
+                  <p className="text-xs text-forest-500 mt-1">Safe method</p>
                 </div>
                 <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Award className="w-7 h-7 text-purple-600" />
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Active Members */}
             <div className="group relative rounded-2xl bg-white p-6 border border-forest-100 hover:border-blue-300 hover:shadow-xl transition-all duration-300">
@@ -458,7 +516,7 @@ export default function CyclesPage() {
 
             <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
               <div className="flex items-start gap-2">
-                <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                 <p className="text-sm text-blue-700 leading-relaxed">
                   <span className="font-bold">Tip:</span> A typical village
                   banking cycle runs for 10-12 months. Members will contribute
@@ -493,6 +551,151 @@ export default function CyclesPage() {
           size="xl"
         >
           <div className="space-y-6">
+            {/* Outstanding Loans Warning */}
+            {hasOutstandingLoans && (
+              <div className="rounded-2xl bg-gradient-to-r from-red-50 to-orange-50 p-6 border-l-4 border-red-500">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="w-6 h-6 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-red-900 mb-2">
+                      ⚠️ Outstanding Loans Warning
+                    </h3>
+                    <p className="text-red-700 mb-2">
+                      There are{" "}
+                      <strong>{activeLoans.length} active loans</strong> with{" "}
+                      <strong>{formatCurrency(totalOutstanding)}</strong> still
+                      outstanding.
+                    </p>
+                    <p className="text-red-600 text-sm">
+                      <strong>Recommendation:</strong> Traditional village
+                      banking groups ONLY close cycles when all money is back in
+                      the pot. Consider using the Safe Distribution method.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Distribution Method Selection */}
+            {/* <div className="rounded-2xl bg-white p-6 border-2 border-forest-200">
+              <h3 className="text-lg font-bold text-forest-900 mb-4">
+                Select Distribution Method
+              </h3>
+
+              <div className="space-y-4">
+                <div
+                  onClick={() => setDistributionMethod("safe")}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    distributionMethod === "safe"
+                      ? "border-green-500 bg-green-50"
+                      : "border-forest-200 hover:border-green-300"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      checked={distributionMethod === "safe"}
+                      onChange={() => setDistributionMethod("safe")}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-bold text-green-900">
+                          Safe Distribution (Recommended)
+                        </h4>
+                        <span className="px-2 py-0.5 bg-green-600 text-white text-xs rounded font-bold">
+                          SAFE
+                        </span>
+                      </div>
+                      <p className="text-sm text-green-700 mb-3">
+                        Only distribute cash that's actually available. Protects
+                        the group from loan defaults.
+                      </p>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="p-3 bg-white rounded border border-green-200">
+                          <p className="text-xs text-green-600 font-medium">
+                            Distribute Now
+                          </p>
+                          <p className="font-bold text-green-900 text-lg">
+                            {formatCurrency(safeProfit)}
+                          </p>
+                          <p className="text-xs text-green-600 mt-1">
+                            {formatCurrency(safeDividendPerShare)} per share
+                          </p>
+                        </div>
+                        {reservedProfit > 0 && (
+                          <div className="p-3 bg-white rounded border border-amber-200">
+                            <p className="text-xs text-amber-600 font-medium">
+                              Reserved
+                            </p>
+                            <p className="font-bold text-amber-900 text-lg">
+                              {formatCurrency(reservedProfit)}
+                            </p>
+                            <p className="text-xs text-amber-600 mt-1">
+                              Pay when loans return
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => setDistributionMethod("full")}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    distributionMethod === "full"
+                      ? "border-red-500 bg-red-50"
+                      : "border-forest-200 hover:border-red-300"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      checked={distributionMethod === "full"}
+                      onChange={() => setDistributionMethod("full")}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-bold text-red-900">
+                          Full Distribution (Risky)
+                        </h4>
+                        <span className="px-2 py-0.5 bg-red-600 text-white text-xs rounded font-bold">
+                          RISKY
+                        </span>
+                      </div>
+                      <p className="text-sm text-red-700 mb-3">
+                        Distribute all profit assuming all loans will be paid
+                        back.
+                        <strong> Dangerous if loans default!</strong>
+                      </p>
+                      <div className="p-3 bg-white rounded border border-red-200">
+                        <p className="text-xs text-red-600 font-medium">
+                          Full Distribution
+                        </p>
+                        <p className="font-bold text-red-900 text-lg">
+                          {formatCurrency(totalProfit)}
+                        </p>
+                        <p className="text-xs text-red-600 mt-1">
+                          {formatCurrency(fullDividendPerShare)} per share
+                        </p>
+                      </div>
+                      {hasOutstandingLoans && (
+                        <p className="text-xs text-red-600 mt-2 font-medium">
+                          ⚠️ Warning: You only have{" "}
+                          {formatCurrency(availableCash)} available, but trying
+                          to distribute {formatCurrency(totalProfit)}!
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div> */}
+
             {/* Summary Card */}
             <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-bank-50 to-bank-100/50 p-6 border-2 border-bank-200">
               <div className="absolute top-0 right-0 w-32 h-32 opacity-20">
@@ -503,71 +706,80 @@ export default function CyclesPage() {
                   <Award className="w-5 h-5" />
                   Share-out Summary
                 </h4>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="p-4 bg-white rounded-xl">
-                    <p className="text-sm font-semibold text-forest-600 mb-1">
-                      Total Profit (Interest)
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="p-3 bg-white rounded-xl border border-bank-200">
+                    <p className="text-xs font-semibold text-bank-600 uppercase">
+                      Projected Total Profit
                     </p>
-                    <p className="text-2xl font-bold text-bank-700">
+                    <p className="text-xl font-bold text-bank-700">
                       {formatCurrency(totalProfit)}
                     </p>
                   </div>
-                  <div className="p-4 bg-white rounded-xl">
-                    <p className="text-sm font-semibold text-forest-600 mb-1">
+                  <div className="p-3 bg-white rounded-xl border border-forest-200">
+                    <p className="text-xs font-semibold text-forest-600 uppercase">
                       Total Shares
                     </p>
-                    <p className="text-2xl font-bold text-purple-700">
+                    <p className="text-xl font-bold text-forest-700">
                       {totalShares}
                     </p>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="p-5 bg-white rounded-xl border-2 border-bank-300">
-                    <p className="text-sm font-semibold text-forest-600 mb-2">
-                      Dividend Per Share
+                  <div className="p-3 bg-white rounded-xl border border-amber-200">
+                    <p className="text-xs font-semibold text-amber-600 uppercase">
+                      Outstanding
                     </p>
-                    <p className="text-4xl font-bold text-bank-700">
-                      {formatCurrency(dividendPerShare)}
-                    </p>
-                    <p className="text-xs text-forest-500 mt-2 font-medium">
-                      Formula: Total Profit ÷ Total Shares ={" "}
-                      {formatCurrency(totalProfit)} ÷ {totalShares}
+                    <p className="text-xl font-bold text-amber-700">
+                      {formatCurrency(totalOutstanding)}
                     </p>
                   </div>
-                  <div className="p-5 bg-white rounded-xl border-2 border-bank-300">
-                    <p className="text-sm font-semibold text-forest-600 mb-2">
-                      Percent Made
+                  <div className="p-3 bg-white rounded-xl border border-green-200">
+                    <p className="text-xs font-semibold text-green-600 uppercase">
+                      Projected Profit Percentage
                     </p>
-                    <p className="text-4xl font-bold text-bank-700">
-                      {(totalProfit / potSummary.savingsPot) * 100}%
-                    </p>
-                    <p className="text-xs text-forest-500 mt-2 font-medium">
-                      Formula: Total Profit ÷ Group Savings = {totalProfit} ÷{" "}
-                      {potSummary.savingsPot}
+                    <p className="text-xl font-bold text-green-700">
+                      {profitPercentage}%
                     </p>
                   </div>
                 </div>
-                {/* <div className="p-5 bg-white rounded-xl border-2 border-bank-300">
-                  <p className="text-sm font-semibold text-forest-600 mb-2">
-                    Dividend Per Share
-                  </p>
-                  <p className="text-4xl font-bold text-bank-700">
-                    {formatCurrency(dividendPerShare)}
-                  </p>
-                  <p className="text-xs text-forest-500 mt-2 font-medium">
-                    Formula: Total Profit ÷ Total Shares ={" "}
-                    {formatCurrency(totalProfit)} ÷ {totalShares}
-                  </p>
-                </div> */}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-5 bg-white rounded-xl border-2 border-bank-300">
+                    <p className="text-sm font-semibold text-forest-600 mb-2">
+                      Projected Total Savings
+                    </p>
+                    <p className="text-4xl font-bold text-bank-700">
+                      {formatCurrency(projectedTotalSavings)}
+                    </p>
+                    {/* <p className="text-xs text-forest-500 mt-2 font-medium">
+                      Distributing: {formatCurrency(distributingProfit)} of{" "}
+                      {formatCurrency(totalProfit)} total profit
+                    </p> */}
+                  </div>
+
+                  <div className="p-5 bg-white rounded-xl border-2 border-bank-300">
+                    <p className="text-sm font-semibold text-forest-600 mb-2">
+                      Available Cash
+                    </p>
+                    <p className="text-4xl font-bold text-green-700">
+                      {formatCurrency(availableCash)}
+                    </p>
+                    {/* <p className="text-xs text-forest-500 mt-2 font-medium">
+                      Formula: ({formatCurrency(totalProfit)} ÷{" "}
+                      {formatCurrency(potSummary.savingsPot)}) × 100
+                    </p> */}
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Member Payouts Table */}
             <div className="rounded-xl bg-white border border-forest-200 overflow-hidden">
               <div className="p-4 bg-forest-50 border-b border-forest-200">
-                <h4 className="font-bold text-forest-900">Member Payouts</h4>
+                <h4 className="font-bold text-forest-900">
+                  Projected Member Payouts
+                </h4>
                 <p className="text-sm text-forest-600 mt-0.5">
-                  Individual share-out calculations for each member
+                  Individual share-out calculation (Formula: Projected Total
+                  Savings / Member Share)
                 </p>
               </div>
               <div className="overflow-x-auto max-h-96">
@@ -599,7 +811,7 @@ export default function CyclesPage() {
                         <tr key={member.id} className="hover:bg-forest-50">
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-bank-500 to-bank-600 flex items-center justify-center text-white font-bold text-xs">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-bank-500 to-bank-600 flex items-center justify-center text-white font-bold text-xs shadow-md">
                                 {member.name
                                   .split(" ")
                                   .map((n) => n[0])
@@ -642,10 +854,12 @@ export default function CyclesPage() {
                         {formatCurrency(potSummary.savingsPot)}
                       </td>
                       <td className="px-4 py-3 text-right text-purple-600">
-                        {formatCurrency(totalProfit)}
+                        {formatCurrency(distributingProfit)}
                       </td>
                       <td className="px-4 py-3 text-right text-forest-900 text-lg">
-                        {formatCurrency(potSummary.savingsPot + totalProfit)}
+                        {formatCurrency(
+                          potSummary.savingsPot + distributingProfit,
+                        )}
                       </td>
                     </tr>
                   </tfoot>
@@ -653,21 +867,108 @@ export default function CyclesPage() {
               </div>
             </div>
 
-            {/* Warning */}
-            <div className="p-5 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-6 h-6 text-amber-600 flex-shrink-0" />
-                <div>
-                  <p className="font-bold text-amber-900 mb-1">
-                    ⚠️ Warning: This action is permanent
-                  </p>
-                  <p className="text-sm text-amber-800 leading-relaxed">
-                    Make sure all loans are settled and all payments are
-                    recorded before closing this cycle. Once closed, you cannot
-                    make changes to the cycle data.
-                  </p>
-                </div>
+            {/* //memebr cash avaliable payout */}
+            {/* <div className="rounded-xl bg-white border border-forest-200 overflow-hidden">
+              <div className="p-4 bg-forest-50 border-b border-forest-200">
+                <h4 className="font-bold text-forest-900">
+                  Member Payouts From Available Cash
+                </h4>
+                <p className="text-sm text-forest-600 mt-0.5">
+                  Individual share-out calculation (Formula: Available Cash /
+                  Member Share)
+                </p>
               </div>
+              <div className="overflow-x-auto max-h-96">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0">
+                    <tr className="bg-forest-100 border-b border-forest-200">
+                      <th className="px-4 py-3 text-left font-bold text-forest-700 uppercase text-xs tracking-wider">
+                        Member
+                      </th>
+                      <th className="px-4 py-3 text-center font-bold text-forest-700 uppercase text-xs tracking-wider">
+                        Shares
+                      </th>
+                      <th className="px-4 py-3 text-right font-bold text-forest-700 uppercase text-xs tracking-wider">
+                        Savings
+                      </th>
+                      <th className="px-4 py-3 text-right font-bold text-forest-700 uppercase text-xs tracking-wider">
+                        Dividend
+                      </th>
+                      <th className="px-4 py-3 text-right font-bold text-forest-700 uppercase text-xs tracking-wider">
+                        Total Payout
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-forest-100">
+                    {activeMembers.map((member) => {
+                      const payout =
+                        (member.totalShares / totalShares) * availableCash;
+                      const dividend = payout - member.totalSavings;
+
+                      return (
+                        <tr key={member.id} className="hover:bg-forest-50">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-bank-500 to-bank-600 flex items-center justify-center text-white font-bold text-xs shadow-md">
+                                {member.name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                                  .toUpperCase()
+                                  .slice(0, 2)}
+                              </div>
+                              <span className="font-semibold text-forest-900">
+                                {member.name}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 font-bold rounded">
+                              {member.totalShares}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-bank-600">
+                            {formatCurrency(member.totalSavings)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-purple-600">
+                            {formatCurrency(dividend)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-forest-900 text-base">
+                            {formatCurrency(payout)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-forest-50 font-bold border-t-2 border-forest-200">
+                      <td className="px-4 py-3 text-forest-900">Totals</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 font-bold rounded">
+                          {totalShares}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right text-bank-600">
+                        {formatCurrency(potSummary.savingsPot)}
+                      </td>
+                      <td className="px-4 py-3 text-right text-purple-600">
+                        {formatCurrency(availableCash - potSummary.savingsPot)}
+                      </td>
+                      <td className="px-4 py-3 text-right text-forest-900 text-lg">
+                        {formatCurrency(availableCash)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div> */}
+
+            {/* Educational Note */}
+            <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+              <p className="text-sm text-blue-800">
+                <strong>💡 Best Practice:</strong> ONLY close cycles when all
+                loans are fully repaid.
+              </p>
             </div>
 
             {/* Action Buttons */}
@@ -680,10 +981,10 @@ export default function CyclesPage() {
               </button>
               <button
                 onClick={handleCloseCycle}
-                className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-500 text-white font-semibold hover:from-red-700 hover:to-red-600 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                className={`flex-1 px-6 py-3 rounded-xl font-semibold hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl bg-gradient-to-r from-red-600 to-red-500 text-white hover:from-red-700 hover:to-red-600"
+                `}
               >
-                <Lock className="w-5 h-5 inline mr-2" />
-                Close Cycle & Lock
+                Share-out (locks Cycle) <Lock className="w-5 h-5 inline mr-2" />
               </button>
             </div>
           </div>

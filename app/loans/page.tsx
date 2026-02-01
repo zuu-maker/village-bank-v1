@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Head from "next/head";
 import Layout from "@/components/Layout";
 import Modal from "@/components/Modal";
@@ -58,6 +58,8 @@ export default function LoansPage() {
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [fineAmount, setFineAmount] = useState(0);
 
+  console.log("settings ->", settings);
+
   const [formData, setFormData] = useState({
     memberId: "",
     amount: 0,
@@ -68,6 +70,22 @@ export default function LoansPage() {
       | "custom_simple"
       | "compound",
   });
+
+  useEffect(() => {
+    setFormData({
+      memberId: "",
+      amount: 0,
+      period: 90,
+      interestRate: settings.defaultInterestRate,
+      interestType: settings.defaultInterestType as
+        | "normal_simple"
+        | "custom_simple"
+        | "compound",
+    });
+  }, [settings]);
+
+  // console.log("form ->", formData);
+
   const [eligibilityResult, setEligibilityResult] = useState<ReturnType<
     typeof checkEligibility
   > | null>(null);
@@ -101,7 +119,10 @@ export default function LoansPage() {
 
   // Subtract all loan disbursements (what we gave out)
   const totalLoanDisbursements = loans
-    .filter((l) => l.status === "active" || l.status === "paid")
+    .filter(
+      (l) =>
+        (l.status === "active" || l.status === "paid") && l.rolloverCount === 0,
+    )
     .reduce((sum, l) => sum + l.principalAmount, 0);
 
   const availableToLoan = Math.max(
@@ -139,7 +160,7 @@ export default function LoansPage() {
     setFormData({
       memberId: "",
       amount: 0,
-      period: 90,
+      period: settings.loanTermDays,
       interestRate: settings.defaultInterestRate,
       interestType: settings.defaultInterestType,
     });
@@ -335,9 +356,6 @@ export default function LoansPage() {
 
   return (
     <>
-      <Head>
-        <title>Loans | Village Banking System</title>
-      </Head>
       <Layout title="Loans">
         <div className="space-y-6 lg:space-y-8 animate-fade-in">
           {/* Header Section */}
@@ -606,18 +624,18 @@ export default function LoansPage() {
                         >
                           <CircleAlert className="w-4 h-4 text-red-600 group-hover:text-red-700" />
                         </button>
-                        {isOverdue(loan.dueDate) && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRollover(loan);
-                            }}
-                            className="p-2.5 rounded-xl hover:bg-amber-100 transition-all duration-200 hover:scale-110 group"
-                            title="Rollover loan"
-                          >
-                            <RefreshCw className="w-4 h-4 text-amber-600 group-hover:text-amber-700" />
-                          </button>
-                        )}
+                        {/* {isOverdue(loan.dueDate) && ( */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRollover(loan);
+                          }}
+                          className="p-2.5 rounded-xl hover:bg-amber-100 transition-all duration-200 hover:scale-110 group"
+                          title="Rollover loan"
+                        >
+                          <RefreshCw className="w-4 h-4 text-amber-600 group-hover:text-amber-700" />
+                        </button>
+                        {/* )} */}
                       </>
                     )}
                   </div>
@@ -635,7 +653,7 @@ export default function LoansPage() {
             setFormData({
               memberId: "",
               amount: 0,
-              period: 90,
+              period: settings.loanTermDays,
               interestRate: settings.defaultInterestRate,
               interestType: settings.defaultInterestType,
             });
@@ -829,7 +847,7 @@ export default function LoansPage() {
                   setFormData({
                     memberId: "",
                     amount: 0,
-                    period: 90,
+                    period: settings.loanTermDays,
                     interestRate: settings.defaultInterestRate,
                     interestType: settings.defaultInterestType,
                   });

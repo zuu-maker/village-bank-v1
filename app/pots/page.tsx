@@ -290,12 +290,12 @@ export default function PotsPage() {
               </div>
               <div className="flex items-center justify-between p-3 bg-forest-50 rounded-xl">
                 <span className="text-sm font-semibold text-forest-600">
-                  Per Birthday Gift
+                  Average Per Member
                 </span>
                 <span className="font-bold text-forest-900">
                   {formatCurrency(
                     settings.birthdayContributionAmount *
-                      Math.max(0, activeMembers.length - 1),
+                      Math.max(0, activeMembers.length),
                   )}
                 </span>
               </div>
@@ -307,101 +307,6 @@ export default function PotsPage() {
                     <span className="font-bold">Rotating fund:</span> Each
                     member receives all contributions from others on their
                     birthday month.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Fund Flow Diagram */}
-        <div className="rounded-2xl bg-white border border-forest-100 p-8 shadow-lg">
-          <div className="flex items-center gap-2 mb-6">
-            <TrendingUp className="w-6 h-6 text-bank-600" />
-            <h3 className="text-2xl font-display font-bold text-forest-900">
-              How Funds Flow
-            </h3>
-          </div>
-
-          <div className="flex flex-col lg:flex-row items-center justify-center gap-8">
-            {/* Members Input */}
-            <div className="text-center">
-              <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-forest-100 to-forest-50 flex items-center justify-center mb-3 shadow-lg">
-                <Users className="w-10 h-10 text-forest-600" />
-              </div>
-              <p className="font-bold text-forest-900 text-lg">Members</p>
-              <p className="text-sm text-forest-500 font-medium">
-                Monthly Meeting
-              </p>
-            </div>
-
-            <ArrowRight className="w-8 h-8 text-bank-500 rotate-90 lg:rotate-0 flex-shrink-0" />
-
-            {/* Contributions */}
-            <div className="grid grid-cols-1 gap-4 flex-1 max-w-md">
-              <div className="group flex items-center gap-3 p-4 bg-gradient-to-r from-bank-50 to-white rounded-xl border-2 border-bank-200 hover:border-bank-300 hover:shadow-md transition-all duration-300">
-                <div className="w-12 h-12 rounded-xl bg-bank-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                  <PiggyBank className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-bold text-bank-700">Share Purchase</p>
-                  <p className="text-sm text-bank-600 font-medium">
-                    → Savings Pot
-                  </p>
-                </div>
-              </div>
-
-              <div className="group flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-white rounded-xl border-2 border-blue-200 hover:border-blue-300 hover:shadow-md transition-all duration-300">
-                <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                  <Users className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-bold text-blue-700">Social Contribution</p>
-                  <p className="text-sm text-blue-600 font-medium">
-                    → Social Pot
-                  </p>
-                </div>
-              </div>
-
-              <div className="group flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-white rounded-xl border-2 border-purple-200 hover:border-purple-300 hover:shadow-md transition-all duration-300">
-                <div className="w-12 h-12 rounded-xl bg-purple-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                  <Gift className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-bold text-purple-700">
-                    Birthday Contribution
-                  </p>
-                  <p className="text-sm text-purple-600 font-medium">
-                    → Birthday Pot
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <ArrowRight className="w-8 h-8 text-bank-500 rotate-90 lg:rotate-0 flex-shrink-0" />
-
-            {/* Outputs */}
-            <div className="grid grid-cols-1 gap-4 flex-1 max-w-md">
-              <div className="group flex items-center gap-3 p-4 bg-gradient-to-r from-amber-50 to-white rounded-xl border-2 border-amber-200 hover:border-amber-300 hover:shadow-md transition-all duration-300">
-                <div className="w-12 h-12 rounded-xl bg-amber-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-bold text-amber-700">Loans + Interest</p>
-                  <p className="text-sm text-amber-600 font-medium">
-                    Group Profit
-                  </p>
-                </div>
-              </div>
-
-              <div className="group flex items-center gap-3 p-4 bg-gradient-to-r from-bank-50 to-white rounded-xl border-2 border-bank-200 hover:border-bank-300 hover:shadow-md transition-all duration-300">
-                <div className="w-12 h-12 rounded-xl bg-bank-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                  <CircleDollarSign className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="font-bold text-bank-700">Cycle Share-out</p>
-                  <p className="text-sm text-bank-600 font-medium">
-                    Dividends to Members
                   </p>
                 </div>
               </div>

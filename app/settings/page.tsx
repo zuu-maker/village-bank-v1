@@ -46,14 +46,10 @@ export default function SettingsPage() {
 
   return (
     <>
-      <Head>
-        <title>Settings | Village Banking System</title>
-      </Head>
-
       <Layout title="Settings">
         <div className="space-y-6 lg:space-y-8 animate-fade-in">
           {/* Header Section */}
-          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-forest-600 via-forest-500 to-forest-600 p-8 lg:p-10 shadow-2xl shadow-forest-500/20">
+          <div className="relative rounded-3xl overflow-hidden bg-linear-to-br from-forest-600 via-forest-500 to-forest-600 p-8 lg:p-10 shadow-2xl shadow-forest-500/20">
             {/* Decorative elements */}
             <div className="absolute top-0 right-0 w-96 h-96 opacity-10">
               <div className="w-full h-full bg-white rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3" />
@@ -76,7 +72,7 @@ export default function SettingsPage() {
                   </h1>
                   <p className="text-forest-50 text-base lg:text-lg max-w-2xl leading-relaxed">
                     Configure your village banking system parameters including
-                    contributions, loans, interest rates, and penalties.
+                    contributions, loans, and interest rates.
                   </p>
                 </div>
                 <div className="hidden lg:flex w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm items-center justify-center border border-white/20">
@@ -88,9 +84,9 @@ export default function SettingsPage() {
 
           {/* Success Alert */}
           {saved && (
-            <div className="relative rounded-2xl bg-gradient-to-r from-bank-50 to-green-50 p-5 border-2 border-bank-300 shadow-lg animate-slide-up">
+            <div className="relative rounded-2xl bg-linear-to-r from-bank-50 to-green-50 p-5 border-2 border-bank-300 shadow-lg animate-slide-up">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-bank-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-bank-600 flex items-center justify-center shrink-0">
                   <Check className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -107,9 +103,9 @@ export default function SettingsPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* General Settings */}
               <div className="rounded-2xl bg-white border border-forest-100 overflow-hidden shadow-lg">
-                <div className="p-6 bg-gradient-to-r from-bank-50 to-white border-b border-bank-100">
+                <div className="p-6 bg-linear-to-r from-bank-50 to-white border-b border-bank-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-bank-600 to-bank-500 flex items-center justify-center shadow-lg">
+                    <div className="w-12 h-12 rounded-xl bg-linear-to-br from-bank-600 to-bank-500 flex items-center justify-center shadow-lg">
                       <DollarSign className="w-6 h-6 text-white" />
                     </div>
                     <div>
@@ -167,9 +163,9 @@ export default function SettingsPage() {
 
               {/* Contribution Settings */}
               <div className="rounded-2xl bg-white border border-forest-100 overflow-hidden shadow-lg">
-                <div className="p-6 bg-gradient-to-r from-blue-50 to-white border-b border-blue-100">
+                <div className="p-6 bg-linear-to-r from-blue-50 to-white border-b border-blue-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-blue-500 flex items-center justify-center shadow-lg">
+                    <div className="w-12 h-12 rounded-xl bg-linear-to-br from-blue-600 to-blue-500 flex items-center justify-center shadow-lg">
                       <Users className="w-6 h-6 text-white" />
                     </div>
                     <div>
@@ -186,7 +182,7 @@ export default function SettingsPage() {
                 <div className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                      <label className="block text-sm font-semibold text-forest-700 mb-2 flex items-center gap-2">
+                      <label className=" text-sm font-semibold text-forest-700 mb-2 flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-bank-600" />
                         Share Price ({formData.currency})
                       </label>
@@ -213,7 +209,7 @@ export default function SettingsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-forest-700 mb-2 flex items-center gap-2">
+                      <label className="text-sm font-semibold text-forest-700 mb-2 flex items-center gap-2">
                         <Users className="w-4 h-4 text-blue-600" />
                         Social Fund ({formData.currency})
                       </label>
@@ -240,7 +236,7 @@ export default function SettingsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-forest-700 mb-2 flex items-center gap-2">
+                      <label className="text-sm font-semibold text-forest-700 mb-2 flex items-center gap-2">
                         <Gift className="w-4 h-4 text-purple-600" />
                         Birthday Fund ({formData.currency})
                       </label>
@@ -273,9 +269,9 @@ export default function SettingsPage() {
 
               {/* Loan Settings */}
               <div className="rounded-2xl bg-white border border-forest-100 overflow-hidden shadow-lg">
-                <div className="p-6 bg-gradient-to-r from-amber-50 to-white border-b border-amber-100">
+                <div className="p-6 bg-linear-to-r from-amber-50 to-white border-b border-amber-100">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-600 to-amber-500 flex items-center justify-center shadow-lg">
+                    <div className="w-12 h-12 rounded-xl bg-linear-to-br from-amber-600 to-amber-500 flex items-center justify-center shadow-lg">
                       <HandCoins className="w-6 h-6 text-white" />
                     </div>
                     <div>
@@ -292,7 +288,7 @@ export default function SettingsPage() {
                 <div className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-semibold text-forest-700 mb-2 flex items-center gap-2">
+                      <label className="text-sm font-semibold text-forest-700 mb-2 flex items-center gap-2">
                         <Percent className="w-4 h-4 text-amber-600" />
                         Default Interest Rate (%)
                       </label>
@@ -379,7 +375,7 @@ export default function SettingsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-forest-700 mb-2 flex items-center gap-2">
+                      <label className="text-sm font-semibold text-forest-700 mb-2 flex items-center gap-2">
                         <Clock className="w-4 h-4 text-amber-600" />
                         Loan Term (Days)
                       </label>
@@ -404,87 +400,8 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Penalty Settings */}
-              <div className="rounded-2xl bg-white border border-forest-100 overflow-hidden shadow-lg">
-                <div className="p-6 bg-gradient-to-r from-red-50 to-white border-b border-red-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-600 to-red-500 flex items-center justify-center shadow-lg">
-                      <AlertTriangle className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-forest-900">
-                        Penalty Settings
-                      </h2>
-                      <p className="text-sm text-forest-600">
-                        Fines and late payment charges
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-semibold text-forest-700 mb-2">
-                        Late Payment Penalty (%)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={formData.latePenaltyRate}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              latePenaltyRate: Number(e.target.value),
-                            })
-                          }
-                          className="w-full px-4 pr-10 py-3 rounded-xl border border-forest-200 focus:border-bank-500 focus:ring-4 focus:ring-bank-500/20 transition-all duration-200"
-                          min="0"
-                          max="50"
-                          step="0.5"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-forest-500 font-semibold">
-                          %
-                        </span>
-                      </div>
-                      <p className="text-xs text-forest-500 mt-2 font-medium">
-                        Added to overdue loan balance
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-forest-700 mb-2">
-                        Absentee Fine (%)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={formData.absenteeFinePecentage}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              absenteeFinePecentage: Number(e.target.value),
-                            })
-                          }
-                          className="w-full px-4 pr-10 py-3 rounded-xl border border-forest-200 focus:border-bank-500 focus:ring-4 focus:ring-bank-500/20 transition-all duration-200"
-                          min="0"
-                          max="50"
-                          step="0.5"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-forest-500 font-semibold">
-                          %
-                        </span>
-                      </div>
-                      <p className="text-xs text-forest-500 mt-2 font-medium">
-                        Percentage of share price
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Preview Section */}
-              <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-forest-50 to-bank-50 p-8 border-2 border-forest-200">
+              <div className="relative rounded-2xl overflow-hidden bg-linear-to-br from-forest-50 to-bank-50 p-8 border-2 border-forest-200">
                 <div className="absolute top-0 right-0 w-48 h-48 opacity-10">
                   <div className="w-full h-full bg-bank-500 rounded-full blur-3xl" />
                 </div>
@@ -560,7 +477,7 @@ export default function SettingsPage() {
 
                 <button
                   type="submit"
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-to-r from-bank-600 to-bank-500 text-white font-bold hover:from-bank-700 hover:to-bank-600 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-linear-to-r from-bank-600 to-bank-500 text-white font-bold hover:from-bank-700 hover:to-bank-600 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
                   <Save className="w-5 h-5" />
                   Save Settings

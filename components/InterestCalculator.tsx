@@ -6,6 +6,7 @@ import {
   TrendingUp,
   Sparkles,
   DollarSign,
+  Zap,
 } from "lucide-react";
 import { calculateInterest } from "../utils/database";
 import { formatCurrency, generateLoanSchedule } from "../utils/helpers";
@@ -25,9 +26,9 @@ const InterestCalculator: React.FC<InterestCalculatorProps> = ({
   const { settings } = useSettings();
   const [principal, setPrincipal] = useState(initialPrincipal);
   const [rate, setRate] = useState(settings.defaultInterestRate);
-  const [interestType, setInterestType] = useState<"simple" | "compound">(
-    settings.defaultInterestType,
-  );
+  const [interestType, setInterestType] = useState<
+    "normal_simple" | "custom_simple" | "compound"
+  >(settings.defaultInterestType || "normal_simple");
   const [periods, setPeriods] = useState(1);
 
   const result = useMemo(() => {
@@ -107,12 +108,13 @@ const InterestCalculator: React.FC<InterestCalculatorProps> = ({
             <label className="block text-sm font-semibold text-forest-700 mb-3">
               Interest Type
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Normal Simple Interest (PRT) */}
               <button
                 type="button"
-                onClick={() => setInterestType("simple")}
+                onClick={() => setInterestType("normal_simple")}
                 className={`group relative p-5 rounded-2xl border-2 transition-all duration-300 ${
-                  interestType === "simple"
+                  interestType === "normal_simple"
                     ? "border-bank-500 bg-gradient-to-br from-bank-50 to-white shadow-lg shadow-bank-500/10"
                     : "border-forest-200 bg-white hover:border-forest-300 hover:shadow-md"
                 }`}
@@ -120,14 +122,14 @@ const InterestCalculator: React.FC<InterestCalculatorProps> = ({
                 <div className="flex items-start justify-between mb-3">
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                      interestType === "simple"
+                      interestType === "normal_simple"
                         ? "bg-bank-600 text-white"
                         : "bg-forest-100 text-forest-600 group-hover:bg-forest-200"
                     }`}
                   >
                     <Calculator className="w-5 h-5" />
                   </div>
-                  {interestType === "simple" && (
+                  {interestType === "normal_simple" && (
                     <div className="w-6 h-6 rounded-full bg-bank-600 flex items-center justify-center">
                       <div className="w-2 h-2 rounded-full bg-white" />
                     </div>
@@ -135,21 +137,65 @@ const InterestCalculator: React.FC<InterestCalculatorProps> = ({
                 </div>
                 <p
                   className={`font-bold text-lg mb-1 ${
-                    interestType === "simple"
+                    interestType === "normal_simple"
                       ? "text-bank-700"
                       : "text-forest-900"
                   }`}
                 >
-                  Simple Interest
+                  Normal Simple
                 </p>
                 <p className="text-xs text-forest-500 font-medium mb-2">
-                  Interest on original principal only
+                  Interest × Time periods
                 </p>
                 <p className="text-xs font-mono px-3 py-1.5 rounded-lg inline-block bg-forest-100 text-forest-700">
-                  I = P × r × t
+                  I = P × R × T
                 </p>
               </button>
 
+              {/* Custom Simple Interest (PR) */}
+              <button
+                type="button"
+                onClick={() => setInterestType("custom_simple")}
+                className={`group relative p-5 rounded-2xl border-2 transition-all duration-300 ${
+                  interestType === "custom_simple"
+                    ? "border-amber-500 bg-gradient-to-br from-amber-50 to-white shadow-lg shadow-amber-500/10"
+                    : "border-forest-200 bg-white hover:border-forest-300 hover:shadow-md"
+                }`}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                      interestType === "custom_simple"
+                        ? "bg-amber-600 text-white"
+                        : "bg-forest-100 text-forest-600 group-hover:bg-forest-200"
+                    }`}
+                  >
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  {interestType === "custom_simple" && (
+                    <div className="w-6 h-6 rounded-full bg-amber-600 flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-white" />
+                    </div>
+                  )}
+                </div>
+                <p
+                  className={`font-bold text-lg mb-1 ${
+                    interestType === "custom_simple"
+                      ? "text-amber-700"
+                      : "text-forest-900"
+                  }`}
+                >
+                  Custom Simple
+                </p>
+                <p className="text-xs text-forest-500 font-medium mb-2">
+                  Fixed interest (no time factor)
+                </p>
+                <p className="text-xs font-mono px-3 py-1.5 rounded-lg inline-block bg-forest-100 text-forest-700">
+                  I = P × R
+                </p>
+              </button>
+
+              {/* Compound Interest */}
               <button
                 type="button"
                 onClick={() => setInterestType("compound")}
@@ -182,59 +228,91 @@ const InterestCalculator: React.FC<InterestCalculatorProps> = ({
                       : "text-forest-900"
                   }`}
                 >
-                  Compound Interest
+                  Compound
                 </p>
                 <p className="text-xs text-forest-500 font-medium mb-2">
-                  Interest on principal + accumulated interest
+                  Interest on accumulated total
                 </p>
                 <p className="text-xs font-mono px-3 py-1.5 rounded-lg inline-block bg-forest-100 text-forest-700">
-                  A = P(1+r)^t
+                  A = P(1+R)^T
                 </p>
               </button>
             </div>
           </div>
 
-          {/* Time Period */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-semibold text-forest-700 mb-2">
-              Time Period (Months)
-            </label>
-            <input
-              type="number"
-              value={periods}
-              onChange={(e) =>
-                setPeriods(Math.max(1, Math.min(12, Number(e.target.value))))
-              }
-              className="w-full px-4 py-3 rounded-xl border border-forest-200 focus:border-bank-500 focus:ring-4 focus:ring-bank-500/20 transition-all duration-200"
-              min="1"
-              max="12"
-              placeholder="Enter number of months"
-            />
-            <p className="text-xs text-forest-500 mt-2 font-medium">
-              Choose between 1-12 months
-            </p>
-          </div>
+          {/* Time Period - Only show for normal_simple and compound */}
+          {interestType !== "custom_simple" && (
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-forest-700 mb-2">
+                Time Period (Months)
+              </label>
+              <input
+                type="number"
+                value={periods}
+                onChange={(e) =>
+                  setPeriods(Math.max(1, Math.min(12, Number(e.target.value))))
+                }
+                className="w-full px-4 py-3 rounded-xl border border-forest-200 focus:border-bank-500 focus:ring-4 focus:ring-bank-500/20 transition-all duration-200"
+                min="1"
+                max="12"
+                placeholder="Enter number of months"
+              />
+              <p className="text-xs text-forest-500 mt-2 font-medium">
+                Choose between 1-12 months
+              </p>
+            </div>
+          )}
+
+          {/* Info message for custom simple */}
+          {interestType === "custom_simple" && (
+            <div className="md:col-span-2 p-4 bg-amber-50 rounded-xl border border-amber-200">
+              <p className="text-sm text-amber-800 flex items-center gap-2">
+                <Info className="w-4 h-4" />
+                Custom Simple Interest calculates a flat rate regardless of time
+                period. The interest is simply Principal × Rate.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Info boxes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="group relative rounded-2xl bg-gradient-to-br from-blue-50 to-white p-5 border border-blue-200 hover:shadow-lg transition-all duration-300">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-              <Info className="w-5 h-5 text-blue-600" />
+              <Calculator className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="font-bold text-blue-900 mb-2">Simple Interest</p>
+              <p className="font-bold text-blue-900 mb-2">
+                Normal Simple (PRT)
+              </p>
               <p className="text-sm text-blue-700 leading-relaxed">
-                Interest is calculated only on the original principal amount
-                throughout the loan period. The interest remains constant for
-                each period.
+                Interest calculated on principal multiplied by the number of
+                time periods.
               </p>
               <div className="mt-3 p-2 bg-blue-100/50 rounded-lg">
-                <p className="text-xs font-mono text-blue-800">
-                  Interest = Principal × Rate × Time
-                </p>
+                <p className="text-xs font-mono text-blue-800">I = P × R × T</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="group relative rounded-2xl bg-gradient-to-br from-amber-50 to-white p-5 border border-amber-200 hover:shadow-lg transition-all duration-300">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+              <Zap className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="font-bold text-amber-900 mb-2">
+                Custom Simple (PR)
+              </p>
+              <p className="text-sm text-amber-700 leading-relaxed">
+                Fixed flat-rate interest calculated once, regardless of loan
+                duration.
+              </p>
+              <div className="mt-3 p-2 bg-amber-100/50 rounded-lg">
+                <p className="text-xs font-mono text-amber-800">I = P × R</p>
               </div>
             </div>
           </div>
@@ -250,13 +328,12 @@ const InterestCalculator: React.FC<InterestCalculatorProps> = ({
                 Compound Interest
               </p>
               <p className="text-sm text-purple-700 leading-relaxed">
-                Interest is calculated on the principal plus all previously
-                accumulated interest. This results in exponential growth over
-                time.
+                Interest compounds on principal plus accumulated interest each
+                period.
               </p>
               <div className="mt-3 p-2 bg-purple-100/50 rounded-lg">
                 <p className="text-xs font-mono text-purple-800">
-                  Amount = Principal × (1 + Rate)^Time
+                  A = P × (1 + R)^T
                 </p>
               </div>
             </div>
@@ -297,9 +374,29 @@ const InterestCalculator: React.FC<InterestCalculatorProps> = ({
                   </p>
                 </div>
                 <ArrowRight className="w-6 h-6 text-bank-600" />
-                <div className="px-4 py-2 bg-forest-100 rounded-xl border border-forest-200">
-                  <p className="text-xs font-semibold text-forest-700 uppercase">
-                    {result.type}
+                <div
+                  className={`px-4 py-2 rounded-xl border ${
+                    interestType === "normal_simple"
+                      ? "bg-blue-100 border-blue-200"
+                      : interestType === "custom_simple"
+                        ? "bg-amber-100 border-amber-200"
+                        : "bg-purple-100 border-purple-200"
+                  }`}
+                >
+                  <p
+                    className={`text-xs font-semibold uppercase ${
+                      interestType === "normal_simple"
+                        ? "text-blue-700"
+                        : interestType === "custom_simple"
+                          ? "text-amber-700"
+                          : "text-purple-700"
+                    }`}
+                  >
+                    {interestType === "normal_simple"
+                      ? "Normal Simple"
+                      : interestType === "custom_simple"
+                        ? "Custom Simple"
+                        : "Compound"}
                   </p>
                 </div>
               </div>
@@ -332,11 +429,23 @@ const InterestCalculator: React.FC<InterestCalculatorProps> = ({
                 {formatCurrency(result.total)}
               </p>
               <p className="text-bank-100 text-sm">
-                Over <span className="font-bold text-white">{periods}</span>{" "}
-                month
-                {periods > 1 ? "s" : ""} at{" "}
-                <span className="font-bold text-white">{rate}%</span>{" "}
-                {interestType} interest
+                {interestType === "custom_simple" ? (
+                  <>
+                    Flat rate of{" "}
+                    <span className="font-bold text-white">{rate}%</span> custom
+                    simple interest
+                  </>
+                ) : (
+                  <>
+                    Over <span className="font-bold text-white">{periods}</span>{" "}
+                    month{periods > 1 ? "s" : ""} at{" "}
+                    <span className="font-bold text-white">{rate}%</span>{" "}
+                    {interestType === "normal_simple"
+                      ? "normal simple"
+                      : "compound"}{" "}
+                    interest
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -352,8 +461,8 @@ const InterestCalculator: React.FC<InterestCalculatorProps> = ({
         </div>
       </div>
 
-      {/* Payment Schedule */}
-      {schedule && schedule.length > 1 && (
+      {/* Payment Schedule - Only show for normal_simple and compound with multiple periods */}
+      {schedule && schedule.length > 1 && interestType !== "custom_simple" && (
         <div className="rounded-2xl bg-white border border-forest-100 overflow-hidden shadow-lg">
           <div className="p-6 bg-gradient-to-r from-purple-50 to-white border-b border-purple-100">
             <h3 className="text-xl font-bold text-forest-900 flex items-center gap-2">

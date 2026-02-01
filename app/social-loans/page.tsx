@@ -55,8 +55,8 @@ export default function SocialLoansPage() {
     memberId: "",
     amount: 0,
     period: 30,
-    interestRate: settings.defaultInterestRate,
-    interestType: settings.defaultInterestType as "simple" | "compound",
+    interestRate: 10,
+    interestType: "simple" as "simple" | "compound",
   });
 
   const [welfareData, setWelfareData] = useState({
@@ -116,8 +116,8 @@ export default function SocialLoansPage() {
       memberId: "",
       amount: 0,
       period: 30,
-      interestRate: settings.defaultInterestRate,
-      interestType: settings.defaultInterestType,
+      interestRate: 10,
+      interestType: "simple",
     });
     setEligibilityResult(null);
   };
@@ -636,7 +636,7 @@ export default function SocialLoansPage() {
                   value={formData.amount}
                   onChange={(e) => handleAmountChange(Number(e.target.value))}
                   className="w-full pl-12 pr-4 py-3 rounded-xl border border-forest-200 focus:border-bank-500 focus:ring-4 focus:ring-bank-500/20 transition-all duration-200"
-                  min="0"
+                  // min="0"
                   max={socialSummary.availableForLoans}
                   placeholder="Enter loan amount"
                   required
@@ -688,9 +688,9 @@ export default function SocialLoansPage() {
                       })
                     }
                     className="w-full px-4 pr-10 py-3 rounded-xl border border-forest-200 focus:border-bank-500 focus:ring-4 focus:ring-bank-500/20 transition-all duration-200"
-                    min="0"
-                    max="100"
-                    step="0.5"
+                    // min="0"
+                    // max="100"
+                    // step="0.5"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-forest-500 font-semibold">
                     %

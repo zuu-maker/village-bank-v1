@@ -134,7 +134,7 @@ export interface LoanScheduleItem {
 export const generateLoanSchedule = (
   principal: number,
   rate: number,
-  type: "simple" | "compound",
+  type: "normal_simple" | "custom_simple" | "compound",
   periods: number = 1,
 ): LoanScheduleItem[] => {
   const schedule: LoanScheduleItem[] = [];
@@ -146,8 +146,10 @@ export const generateLoanSchedule = (
     date.setMonth(date.getMonth() + i);
 
     let interest: number;
-    if (type === "simple") {
+    if (type === "normal_simple") {
       interest = principal * (rate / 100);
+    } else if (type === "custom_simple") {
+      interest = balance * (rate / 100);
     } else {
       interest = balance * (rate / 100);
     }
